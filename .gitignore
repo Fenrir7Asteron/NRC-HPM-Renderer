@@ -16,6 +16,9 @@
 /RelWithDebInfo
 /output
 /out
+/vcpkg_installed
 
 CMakeCache.txt
 cmake_install.cmake
+
+*.vdb

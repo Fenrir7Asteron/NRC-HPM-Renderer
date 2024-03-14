@@ -1,5 +1,9 @@
 #include <engine/objects/Model.hpp>
 #include <engine/util/Log.hpp>
+
+#ifndef GLM_ENABLE_EXPERIMENTAL
+#define GLM_ENABLE_EXPERIMENTAL
+#endif // !GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 #include <engine/graphics/VulkanAPI.hpp>
 

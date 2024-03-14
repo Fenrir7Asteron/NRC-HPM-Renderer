@@ -634,6 +634,8 @@ namespace en
 				m_TrainXDist = m_RenderWidth / m_TrainWidth;
 				m_TrainYDist = m_RenderHeight / m_TrainHeight;
 
+				en::Log::Warn("Train pixel count: " + std::to_string(trainPixelCount) + ", m_TrainXDist: " + std::to_string(m_TrainXDist) + ", m_TrainYDist: " + std::to_string(m_TrainYDist));
+
 				return;
 			}
 		}

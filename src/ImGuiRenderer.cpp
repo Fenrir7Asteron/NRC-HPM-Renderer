@@ -1,8 +1,8 @@
 #include <engine/graphics/renderer/ImGuiRenderer.hpp>
 #include <engine/graphics/VulkanAPI.hpp>
 #include <engine/graphics/Window.hpp>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 
 namespace en
 {
@@ -700,7 +700,7 @@ namespace en
 		implVulkanInitInfo.ImageCount = imageCount;
 		implVulkanInitInfo.Allocator = nullptr;
 		implVulkanInitInfo.CheckVkResultFn = CheckVkResult;
-		if (!ImGui_ImplVulkan_Init(&implVulkanInitInfo, m_RenderPass))
+		if (!ImGui_ImplVulkan_Init(&implVulkanInitInfo))
 			Log::Error("Failed to Init ImGuiManager", true);
 
 		// Init imgui on GPU
