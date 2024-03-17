@@ -51,6 +51,7 @@ struct NrcInput
 	float posZ;
 	float theta;
 	float phi;
+	float density;
 };
 
 struct NrcOutput

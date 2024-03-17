@@ -15,12 +15,17 @@ void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 
 	const float phi = acos(dir.y / length(dir.xz));
 	const float normPhi = phi / PI;
 
+	// Calc density
+	const float invMaxDensity = 1.0 / VOLUME_DENSITY_FACTOR;
+	const float density = getDensity(pos) * invMaxDensity;
+
 	// Store infer input
 	nrcInferInput[linearPixelIndex].posX = normPos.x;
 	nrcInferInput[linearPixelIndex].posY = normPos.y;
 	nrcInferInput[linearPixelIndex].posZ = normPos.z;
 	nrcInferInput[linearPixelIndex].theta = normTheta;
 	nrcInferInput[linearPixelIndex].phi = normPhi;
+	nrcTrainInput[linearPixelIndex].density = density;
 }
 
 void main()
