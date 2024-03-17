@@ -15,6 +15,7 @@ namespace en
         static void Init(GLFWwindow* windowHandle);
         static void Update();
         static bool IsKeyPressed(int keycode);
+        static bool IsKeyReleased(int keycode);
         static bool IsMouseButtonPressed(int button);
         static glm::vec2 GetMousePos();
         static glm::vec2 GetMouseMove();

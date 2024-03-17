@@ -26,6 +26,7 @@
 en::Reference* reference = nullptr;
 en::NrcHpmRenderer* nrcHpmRenderer = nullptr;
 en::McHpmRenderer* mcHpmRenderer = nullptr;
+bool renderGui = true;
 
 void RecordSwapchainCommandBuffer(VkCommandBuffer commandBuffer, VkImage image)
 {
@@ -242,7 +243,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	size_t frameCount = 0;
 	bool shutdown = false;
 	bool restartAfterClose = false;
-	bool benchmark = true;
+	bool benchmark = false;
 	bool continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
 	bool pause = false;
 	while (continueLoop && !shutdown)
@@ -303,72 +304,114 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 		const float nrcLoss = nrc.GetLoss();
 
 		// Imgui
-		if (en::Window::IsSupported())
+		if (en::Input::IsKeyPressed(en::KEY_H))
 		{
-			en::ImGuiRenderer::StartFrame();
-
-			ImGui::Begin("Statistics");
-			ImGui::Text((std::string("Framecount ") + std::to_string(frameCount)).c_str());
-			ImGui::Text("DeltaTime %f", deltaTime);
-			ImGui::Text("FPS %d", fps);
-			ImGui::Text("NRC Loss %f", nrcLoss);
-			ImGui::End();
-
-			ImGui::Begin("Controls");
-			shutdown = ImGui::Button("Shutdown");
-			ImGui::Checkbox("Restart after shutdown", &restartAfterClose);
-			ImGui::Checkbox("Benchmark", &benchmark);
-			ImGui::Checkbox("Pause", &pause);
-
-			if (ImGui::BeginCombo("##combo", currentRendererMenuItem))
-			{
-				for (int i = 0; i < rendererMenuItems.size(); i++)
-				{
-					bool selected = (currentRendererMenuItem == rendererMenuItems[i]);
-					if (ImGui::Selectable(rendererMenuItems[i], selected))
-					{
-						if (i != rendererId)
-						{
-							rendererId = i;
-							switch (rendererId)
-							{
-							case 0: // MC
-								en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
-								break;
-							case 1: // NRC
-								en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
-								break;
-							case 2: // Model
-								en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
-								break;
-							default: // Error
-								en::Log::Error("Renderer ID is invalid", true);
-								break;
-							}
-						}
-						currentRendererMenuItem = rendererMenuItems[i];
-					};
-					if (selected) { ImGui::SetItemDefaultFocus(); }
-				}
-				ImGui::EndCombo();
-			}
-
-			ImGui::End();
-
-			mcHpmRenderer->RenderImGui();
-			nrcHpmRenderer->RenderImGui();
-
-			hpmScene.Update(true, deltaTime);
-
-			appConfig.RenderImGui();
-
-			en::ImGuiRenderer::EndFrame(queue, VK_NULL_HANDLE);
-			result = vkQueueWaitIdle(queue);
-			ASSERT_VULKAN(result);
+			renderGui = false;
+			en::Log::Info("RenderGUI enabled: false");
 		}
 
+		if (en::Input::IsKeyPressed(en::KEY_J))
+		{
+			renderGui = true;
+			en::Log::Info("RenderGUI enabled: true");
+		}
+
+		if (en::Window::IsSupported())
+		{
+			if (renderGui)
+			{
+				en::ImGuiRenderer::StartFrame();
+
+				ImGui::Begin("Statistics");
+				ImGui::Text((std::string("Framecount ") + std::to_string(frameCount)).c_str());
+				ImGui::Text("DeltaTime %f", deltaTime);
+				ImGui::Text("FPS %d", fps);
+				ImGui::Text("NRC Loss %f", nrcLoss);
+				ImGui::End();
+
+				ImGui::Begin("Controls");
+				shutdown = ImGui::Button("Shutdown");
+				ImGui::Checkbox("Restart after shutdown", &restartAfterClose);
+				ImGui::Checkbox("Benchmark", &benchmark);
+				ImGui::Checkbox("Pause", &pause);
+
+				if (ImGui::BeginCombo("##combo", currentRendererMenuItem))
+				{
+					for (int i = 0; i < rendererMenuItems.size(); i++)
+					{
+						bool selected = (currentRendererMenuItem == rendererMenuItems[i]);
+						if (ImGui::Selectable(rendererMenuItems[i], selected))
+						{
+							if (i != rendererId)
+							{
+								rendererId = i;
+								switch (rendererId)
+								{
+								case 0: // MC
+									en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
+									break;
+								case 1: // NRC
+									en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+									break;
+								case 2: // Model
+									en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
+									break;
+								default: // Error
+									en::Log::Error("Renderer ID is invalid", true);
+									break;
+								}
+							}
+							currentRendererMenuItem = rendererMenuItems[i];
+						};
+						if (selected) { ImGui::SetItemDefaultFocus(); }
+					}
+					ImGui::EndCombo();
+				}
+
+				ImGui::End();
+
+				mcHpmRenderer->RenderImGui();
+				nrcHpmRenderer->RenderImGui();
+
+				hpmScene.RenderImGui();
+
+				appConfig.RenderImGui();
+
+				en::ImGuiRenderer::EndFrame(queue, VK_NULL_HANDLE);
+				result = vkQueueWaitIdle(queue);
+				ASSERT_VULKAN(result);
+			}
+			else
+			{
+				en::ImGuiRenderer::StartFrame();
+
+				switch (rendererId)
+				{
+				case 0: // MC
+					en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
+					break;
+				case 1: // NRC
+					en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+					break;
+				case 2: // Model
+					en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
+					break;
+				default: // Error
+					en::Log::Error("Renderer ID is invalid", true);
+					break;
+				}
+
+				en::ImGuiRenderer::EndFrame(queue, VK_NULL_HANDLE);
+				result = vkQueueWaitIdle(queue);
+				ASSERT_VULKAN(result);
+			}
+		}
+
+		// Update scene
+		hpmScene.Update(deltaTime);
+
 		// Display
-		if (!pause && en::Window::IsSupported()) { swapchain->DrawAndPresent(VK_NULL_HANDLE, VK_NULL_HANDLE); }
+		if (en::Window::IsSupported()) { swapchain->DrawAndPresent(VK_NULL_HANDLE, VK_NULL_HANDLE); }
 
 		// Benchmark
 		stats.frameIndex = frameCount;

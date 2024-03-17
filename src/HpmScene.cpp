@@ -53,15 +53,8 @@ namespace en
 		};
 	}
 
-	void HpmScene::Update(bool renderImgui, float deltaTime)
+	void HpmScene::Update(float deltaTime)
 	{
-		if (renderImgui)
-		{
-			m_VolumeData->RenderImGui();
-			m_DirLight->RenderImgui();
-			m_PointLight->RenderImGui();
-		}
-
 		if (!m_Dynamic) { return; }
 		switch (m_ID)
 		{
@@ -73,6 +66,13 @@ namespace en
 		default:
 			break;
 		}
+	}
+
+	void HpmScene::RenderImGui()
+	{
+		m_VolumeData->RenderImGui();
+		m_DirLight->RenderImgui();
+		m_PointLight->RenderImGui();
 	}
 
 	void HpmScene::Destroy()

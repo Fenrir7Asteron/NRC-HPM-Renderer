@@ -708,10 +708,10 @@ namespace en
 		//inferCount += m_Nrc.GetInferBatchSize() - (inferCount % m_Nrc.GetTrainBatchSize());
 		const size_t trainCount = m_TrainWidth * m_TrainHeight;
 
-		m_NrcInferInputBufferSize = inferCount * 5 * sizeof(float);
-		m_NrcInferOutputBufferSize = inferCount * 3 * sizeof(float);
-		m_NrcTrainInputBufferSize = trainCount * 5 * sizeof(float);
-		m_NrcTrainTargetBufferSize = trainCount * 3 * sizeof(float);
+		m_NrcInferInputBufferSize = inferCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
+		m_NrcInferOutputBufferSize = inferCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
+		m_NrcTrainInputBufferSize = trainCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
+		m_NrcTrainTargetBufferSize = trainCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
 
 		// Create buffers
 #ifdef _WIN64

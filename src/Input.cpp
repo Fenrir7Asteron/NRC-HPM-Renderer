@@ -30,6 +30,12 @@ namespace en
         return state == GLFW_PRESS || state == GLFW_REPEAT;
     }
 
+    bool Input::IsKeyReleased(int keycode)
+    {
+        int state = glfwGetKey(m_WindowHandle, keycode);
+        return state == GLFW_RELEASE;
+    }
+
     bool Input::IsMouseButtonPressed(int button)
     {
         int state = glfwGetMouseButton(m_WindowHandle, button);

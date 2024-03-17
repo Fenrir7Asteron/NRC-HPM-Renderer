@@ -5,8 +5,8 @@
 
 namespace en
 {
-	const uint32_t NeuralRadianceCache::sc_InputCount = 5;
-	const uint32_t NeuralRadianceCache::sc_OutputCount = 3;
+	uint32_t NeuralRadianceCache::sc_InputCount = 5;
+	uint32_t NeuralRadianceCache::sc_OutputCount = 3;
 
 	NeuralRadianceCache::NeuralRadianceCache(const AppConfig& appConfig) :
 		m_InferBatchSize(2 << (appConfig.log2InferBatchSize - 1)),

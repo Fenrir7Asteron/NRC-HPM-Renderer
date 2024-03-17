@@ -17,7 +17,8 @@ namespace en
 		
 		HpmScene(const AppConfig& appConfig);
 		
-		void Update(bool renderImgui, float deltaTime);
+		void Update(float deltaTime);
+		void RenderImGui();
 
 		void Destroy();
 

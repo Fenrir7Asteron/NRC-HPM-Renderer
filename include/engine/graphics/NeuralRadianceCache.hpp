@@ -31,10 +31,10 @@ namespace en
 		uint32_t GetInferBatchSize() const;
 		uint32_t GetTrainBatchSize() const;
 
-	private:
-		static const uint32_t sc_InputCount;
-		static const uint32_t sc_OutputCount;
+		static uint32_t sc_InputCount;
+		static uint32_t sc_OutputCount;
 
+	private:
 		const uint32_t m_InferBatchSize = 0;
 		const uint32_t m_TrainBatchSize = 0;
 		const uint32_t m_TrainBatchCount = 0;

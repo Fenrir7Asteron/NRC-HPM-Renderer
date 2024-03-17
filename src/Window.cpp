@@ -28,7 +28,7 @@ namespace en
 			static_cast<int>(m_Width), 
 			static_cast<int>(m_Height), 
 			title.c_str(), 
-			nullptr,
+			glfwGetPrimaryMonitor(),
 			nullptr);
 
 		if (m_GLFWHandle == nullptr)
