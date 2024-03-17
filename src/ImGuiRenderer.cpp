@@ -48,8 +48,8 @@ namespace en
 		CreateSampler(device);
 		CreateDescriptorSet(device);
 		CreateRenderPass(device);
-		m_VertShader = new vk::Shader("draw_tex2D/draw_tex2D.vert", false);
-		m_FragShader = new vk::Shader("draw_tex2D/draw_tex2D.frag", false);
+		m_VertShader = new vk::Shader("draw_tex2D/draw_tex2D.vert", true);
+		m_FragShader = new vk::Shader("draw_tex2D/draw_tex2D.frag", true);
 		CreatePipelineLayout(device);
 		CreatePipeline(device);
 		CreateImageResources(device);

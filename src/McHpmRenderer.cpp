@@ -90,7 +90,7 @@ namespace en
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			{}),
-		m_RenderShader("mc/render.comp", false),
+		m_RenderShader("mc/render.comp", true),
 		m_CommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, VulkanAPI::GetGraphicsQFI())
 	{
 		Log::Info("Create McHpmRenderer");

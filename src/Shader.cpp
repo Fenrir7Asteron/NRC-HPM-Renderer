@@ -2,6 +2,7 @@
 #include <engine/graphics/VulkanAPI.hpp>
 #include <engine/util/Log.hpp>
 #include <engine/util/read_file.hpp>
+#include <filesystem>
 
 const std::string compilerPath = "glslc";
 const std::string shaderDirPath = "data/shader/";
@@ -34,6 +35,11 @@ namespace en::vk
 			// Compile
 			if (std::system(command.c_str()) != 0)
 				Log::Error("Failed to compile shader", true);
+		}
+
+		if (!std::filesystem::exists(outputFileName))
+		{
+			Log::Error("Compiled shader does not exist, required shader path: " + outputFileName, true);
 		}
 
 		Create(ReadFileBinary(outputFileName));

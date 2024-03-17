@@ -9,8 +9,8 @@ namespace en
 		m_FrameWidth(width),
 		m_FrameHeight(height),
 		m_Camera(camera),
-		m_VertShader("simple_material/simple_material.vert", false),
-		m_FragShader("simple_material/simple_material.frag", false),
+		m_VertShader("simple_material/simple_material.vert", true),
+		m_FragShader("simple_material/simple_material.frag", true),
 		m_CommandPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, VulkanAPI::GetGraphicsQFI())
 	{
 		m_CommandPool.AllocateBuffers(1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
