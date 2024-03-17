@@ -39,9 +39,9 @@ namespace en
 		m_Width(width),
 		m_Height(height),
 		m_CmdPool(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, VulkanAPI::GetGraphicsQFI()),
-		m_Cmp1Shader("ref/cmp1.comp", false),
-		m_NormShader("ref/norm.comp", false),
-		m_Cmp2Shader("ref/cmp2.comp", false),
+		m_Cmp1Shader("ref/cmp1.comp", true),
+		m_NormShader("ref/norm.comp", true),
+		m_Cmp2Shader("ref/cmp2.comp", true),
 		m_ResultStagingBuffer(
 			sizeof(Reference::Result), 
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, 

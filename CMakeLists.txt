@@ -28,9 +28,77 @@ include("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/script
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 # Vulkan
-find_package(Vulkan REQUIRED)
+find_package(Vulkan REQUIRED COMPONENTS glslc)
+find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
 target_include_directories(${PROJECT_NAME} PRIVATE ${Vulkan_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
+
+#==============================================================================
+# COMPILE SHADERS
+#
+
+set(SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/shader)
+set(SHADER_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/shader/include)
+set(SHADER_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/data/shader)
+
+file(GLOB_RECURSE SHADERS
+  ${SHADER_SOURCE_DIR}/*.vert
+  ${SHADER_SOURCE_DIR}/*.frag
+  ${SHADER_SOURCE_DIR}/*.comp
+  ${SHADER_SOURCE_DIR}/*.geom
+  ${SHADER_SOURCE_DIR}/*.tesc
+  ${SHADER_SOURCE_DIR}/*.tese
+  ${SHADER_SOURCE_DIR}/*.mesh
+  ${SHADER_SOURCE_DIR}/*.task
+  ${SHADER_SOURCE_DIR}/*.rgen
+  ${SHADER_SOURCE_DIR}/*.rchit
+  ${SHADER_SOURCE_DIR}/*.rmiss)
+
+add_custom_command(
+  COMMAND
+    ${CMAKE_COMMAND} -E make_directory ${SHADER_BINARY_DIR}
+  OUTPUT ${SHADER_BINARY_DIR}
+  COMMENT "Creating ${SHADER_BINARY_DIR}"
+)
+
+foreach(source IN LISTS SHADERS)
+  get_filename_component(FILENAME ${source} NAME)
+  get_filename_component(FILE_PATH ${source} DIRECTORY)
+
+  # Exclude restir shaders because they are not implemented
+  string (FIND ${FILE_PATH} restir EXCLUDE_DIR_FOUND)
+
+  if (NOT ${EXCLUDE_DIR_FOUND} EQUAL -1)
+    message(STATUS "Skipping shader ${FILE_PATH}/${FILENAME} compilation")
+    continue()
+  endif()
+
+  string(REPLACE ${SHADER_SOURCE_DIR} ${SHADER_BINARY_DIR} FILE_PATH "${FILE_PATH}")
+
+  add_custom_command(
+  COMMAND
+    ${CMAKE_COMMAND} -E make_directory ${FILE_PATH}
+  OUTPUT ${FILE_PATH}
+  COMMENT "Creating ${FILE_PATH}"
+  )
+
+  add_custom_command(
+    COMMAND
+      ${glslc_executable}
+      #      -MD -MF ${SHADER_BINARY_DIR}/${FILENAME}.d
+      -I ${SHADER_INCLUDE_DIR}
+      -o ${FILE_PATH}/${FILENAME}.spv
+      ${source}
+    OUTPUT ${FILE_PATH}/${FILENAME}.spv
+    DEPENDS ${source} ${FILE_PATH}
+    COMMENT "Compiling ${FILENAME}"
+  )
+  list(APPEND SPV_SHADERS ${FILE_PATH}/${FILENAME}.spv)
+  message(STATUS "Shader include path: ${SHADER_INCLUDE_DIR}")
+  message(STATUS ${FILE_PATH}/${FILENAME}.spv)
+endforeach()
+
+add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
 # CUDA
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
