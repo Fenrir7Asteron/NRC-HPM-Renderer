@@ -153,7 +153,7 @@ namespace en
 
 	AppConfig::AppConfig(const std::vector<char*>& argv)
 	{
-		if (argv.size() != 18) { Log::Error("Argument count does not match requirements for AppConfig", true); }
+		if (argv.size() != 19) { Log::Error("Argument count does not match requirements for AppConfig", true); }
 
 		size_t index = 1;
 
@@ -179,6 +179,7 @@ namespace en
 		primaryRayLength = std::stoi(argv[index++]);
 		primaryRayProb = std::stof(argv[index++]);
 		trainRayLength = std::stoi(argv[index++]);
+		enableBenchmarkOnStart = std::stoi(argv[index++]);
 	}
 
 	std::string AppConfig::GetName() const

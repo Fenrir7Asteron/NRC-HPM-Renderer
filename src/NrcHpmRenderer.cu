@@ -558,6 +558,11 @@ namespace en
 		return m_TimePeriods[c_QueryCount - 1];
 	}
 
+	float NrcHpmRenderer::GetLoss() const
+	{
+		return m_Nrc.GetLoss();
+	}
+
 	void NrcHpmRenderer::SetCamera(VkQueue queue, const Camera* camera)
 	{
 		// Set members
@@ -607,6 +612,11 @@ namespace en
 	{
 		m_ShouldBlend = blend;
 		m_BlendIndex = 1;
+	}
+
+	const NeuralRadianceCache& NrcHpmRenderer::GetNrc()
+	{
+		return m_Nrc;
 	}
 
 	void NrcHpmRenderer::CalcTrainSubset(uint32_t trainPixelCount)

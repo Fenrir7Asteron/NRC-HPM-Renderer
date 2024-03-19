@@ -104,7 +104,10 @@ namespace en
 			Log::Info(
 				"MSE: " + std::to_string(result.mse) +
 				" | rBias: " + std::to_string(result.GetRelBias()) +
-				" | rVar: " + std::to_string(result.GetRelVar()));
+				" | rVar: " + std::to_string(result.GetRelVar()) +
+				" | StdDev: " + std::to_string(result.GetCV()) +
+				" | Loss: " + std::to_string(renderer.GetLoss())
+			);
 		}
 
 		renderer.SetCamera(queue, oldCamera);

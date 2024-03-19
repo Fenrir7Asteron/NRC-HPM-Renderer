@@ -36,9 +36,12 @@ namespace en
 		VkImageView GetImageView() const;
 		bool IsBlending() const;
 		float GetFrameTimeMS() const;
+		float GetLoss() const;
 
 		void SetCamera(VkQueue queue, const Camera* camera);
 		void SetBlend(bool blend);
+
+		const NeuralRadianceCache& GetNrc();
 
 	private:
 		struct SpecializationData

@@ -243,7 +243,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	size_t frameCount = 0;
 	bool shutdown = false;
 	bool restartAfterClose = false;
-	bool benchmark = false;
+	bool benchmark = appConfig.enableBenchmarkOnStart;
 	bool continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
 	bool pause = false;
 	while (continueLoop && !shutdown)
@@ -479,6 +479,7 @@ int main(int argc, char** argv)
 			"64", "6", "21", "14", "4",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",
+			"1",
 		};
 	}
 
