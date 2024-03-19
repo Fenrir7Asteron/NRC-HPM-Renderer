@@ -130,6 +130,12 @@ namespace en
 		vk::Buffer* m_NrcInferFilterStagingBuffer = nullptr;
 		vk::Buffer* m_NrcInferFilterBuffer = nullptr;
 
+		VkDeviceSize m_NrcTrainFilterBufferSize = 0;
+		void* m_NrcTrainFilterData = nullptr;
+		uint32_t* m_NrcTrainFilteredFrameCounter = nullptr;
+		vk::Buffer* m_NrcTrainFilterStagingBuffer = nullptr;
+		vk::Buffer* m_NrcTrainFilterBuffer = nullptr;
+
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
 
@@ -180,7 +186,7 @@ namespace en
 		VkDescriptorSet m_DescSet;
 
 		const float c_TimestampPeriodInMS = VulkanAPI::GetTimestampPeriod() * 1e-6f;
-		const uint32_t c_QueryCount = 8;
+		const uint32_t c_QueryCount = 9;
 		std::vector<float> m_TimePeriods = std::vector<float>(c_QueryCount);
 		uint32_t m_QueryIndex = 0;
 		VkQueryPool m_QueryPool;
@@ -196,6 +202,7 @@ namespace en
 
 		void CreateNrcBuffers();
 		void CreateNrcInferFilterBuffer();
+		void CreateNrcTrainFilterBuffer();
 		void CreateNrcTrainRingBuffer();
 
 		void CreatePipelineLayout(VkDevice device);

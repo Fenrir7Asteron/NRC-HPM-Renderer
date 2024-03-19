@@ -30,13 +30,8 @@ void LoadFromRingBuffer(out vec3 pos, out vec3 dir)
 	dir.z = nrcTrainRingBuffer[prevTail].dirZ;
 }
 
-void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 dir, vec3 target, const bool didScatter)
+void StoreNrcTrainData(const uint linearPixelIndex, const vec3 pos, const vec3 dir, vec3 target, const bool didScatter)
 {
-	// Calc index
-	const uint x = trainImageCoord.x;
-	const uint y = trainImageCoord.y;
-	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
-
 	// Norm pos
 	const vec3 normPos = (pos / skySize) + (skySize / 2.0);
 
@@ -130,9 +125,19 @@ void main()
 	for (uint i = 0; i < TRAIN_SPP; i++) { target += TracePath(rayOrigin, rayDir).xyz; }
 	target /= float(TRAIN_SPP);
 
+	// Calc index
+	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+
 	// Store train data
 	if (TRAIN_RING_BUF_SIZE > 0)
 	{
-		StoreNrcTrainData(trainImageCoord, rayOrigin, rayDir, target, didScatter);
+		StoreNrcTrainData(linearPixelIndex, rayOrigin, rayDir, target, didScatter);
+	}
+
+	// Increment batch valid sample counter
+	if (didScatter)
+	{
+		const uint linearBatchIndex = linearPixelIndex / TRAIN_BATCH_SIZE;
+		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
 	}
 }

@@ -91,14 +91,15 @@ namespace en
 			m_TrainTargetBatches[i] = m_TrainTarget.slice_cols(i * m_TrainBatchSize, m_TrainBatchSize);
 		}
 
-		en::Log::Info("Infer batch count: " + std::to_string(m_InferInputBatches.size()));
+		en::Log::Info("Infer batch count: " + std::to_string(inferBatchCount));
+		en::Log::Info("Train batch count: " + std::to_string(m_TrainBatchCount));
 	}
 
-	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, bool train)
+	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train)
 	{
 		AwaitCudaStartSemaphore();
 		Inference(inferFilter);
-		if (train) { Train(); }
+		if (train) { Train(trainFilter, trainFilteredFrameCounter); }
 		SignalCudaFinishedSemaphore();
 	}
 
@@ -144,14 +145,28 @@ namespace en
 		}
 	}
 
-	void NeuralRadianceCache::Train()
+	void NeuralRadianceCache::Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter)
 	{
 		for (size_t i = 0; i < m_TrainInputBatches.size(); i++)
 		{
-			const tcnn::GPUMatrix<float>& inputBatch = m_TrainInputBatches[i];
-			const tcnn::GPUMatrix<float>& targetBatch = m_TrainTargetBatches[i];
-			auto forwardContext = m_Model.trainer->training_step(inputBatch, targetBatch);
-			m_Loss = m_Model.trainer->loss(*forwardContext.get());
+			if (trainFilter[i] <= 0)
+			{
+				trainFilteredFrameCounter[i] = std::min(trainFilteredFrameCounter[i] + 1, sc_FilterFrameCountThreshold);
+			}
+			else
+			{
+				trainFilteredFrameCounter[i] = 0;
+			}
+
+			// Exclude batch from training if it filtered more than sc_FilterFrameCountThreshold times
+			// Batch is filtered if not a single ray scattered inside it
+			if (trainFilteredFrameCounter[i] < sc_FilterFrameCountThreshold)
+			{
+				const tcnn::GPUMatrix<float>& inputBatch = m_TrainInputBatches[i];
+				const tcnn::GPUMatrix<float>& targetBatch = m_TrainTargetBatches[i];
+				auto forwardContext = m_Model.trainer->training_step(inputBatch, targetBatch);
+				m_Loss = m_Model.trainer->loss(*forwardContext.get());
+			}
 		}
 	}
 
