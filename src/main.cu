@@ -256,8 +256,8 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	// Main loop
 	en::Log::Info("Starting main loop");
 	BenchmarkStats stats;
-	en::LogFile logFileNrc("output/ " + appConfig.GetName() + "/logNrc.txt");
-	en::LogFile logFileMc("output/ " + appConfig.GetName() + "/logMc.txt");
+	en::LogFile logFileNrc("output/" + appConfig.GetName() + "/logNrc.txt");
+	en::LogFile logFileMc("output/" + appConfig.GetName() + "/logMc.txt");
 	VkResult result;
 	size_t frameCount = 0;
 	bool shutdown = false;
@@ -266,7 +266,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	bool benchmark = appConfig.enableBenchmarkOnStart;
 	if (benchmark)
 	{
-		CreateOutputDirectory("output/ " + appConfig.GetName() + "/");
+		CreateOutputDirectory("output/" + appConfig.GetName() + "/");
 	}
 
 	bool continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
@@ -362,7 +362,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				ImGui::Checkbox("Benchmark", &benchmark);
 				if (benchmark && !benchmarkPreviousValue) // on enable
 				{
-					CreateOutputDirectory("output/ " + appConfig.GetName() + "/");
+					CreateOutputDirectory("output/" + appConfig.GetName() + "/");
 				}
 
 				ImGui::Checkbox("Pause", &pause);

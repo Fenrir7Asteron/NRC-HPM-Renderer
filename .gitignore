@@ -22,3 +22,5 @@ CMakeCache.txt
 cmake_install.cmake
 
 *.vdb
+
+.ipynb_checkpoints
