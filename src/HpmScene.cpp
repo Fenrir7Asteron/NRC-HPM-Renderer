@@ -41,12 +41,14 @@ namespace en
 			hdrCdf[1]);
 
 		// Load data
-		m_Density3DTex = new vk::Texture3D(vk::Texture3D::FromVDB("data/volume/wdas_cloud_quarter.vdb"));
-		m_VolumeData = new VolumeData(m_Density3DTex, appConfig.scene.density, 0.8f);
+		vk::Texture3D::FromVDB("data/volume/wdas_cloud_quarter.vdb", &m_Density3DTex, &m_Laplacian3DTex);
+		m_DensityVolumeData = new VolumeData(m_Density3DTex, appConfig.scene.density, 0.8f);
+		m_LaplacianVolumeData = new VolumeData(m_Laplacian3DTex, appConfig.scene.density, 0.8f);
 
 		// Store desc sets
 		m_DescSets = {
-			m_VolumeData->GetDescriptorSet(),
+			m_DensityVolumeData->GetDescriptorSet(),
+			m_LaplacianVolumeData->GetDescriptorSet(),
 			m_DirLight->GetDescriptorSet(),
 			m_PointLight->GetDescriptorSet(),
 			m_HdrEnvMap->GetDescriptorSet()
@@ -70,18 +72,24 @@ namespace en
 
 	void HpmScene::RenderImGui()
 	{
-		m_VolumeData->RenderImGui();
+		m_DensityVolumeData->RenderImGui();
 		m_DirLight->RenderImgui();
 		m_PointLight->RenderImGui();
 	}
 
 	void HpmScene::Destroy()
 	{
-		m_VolumeData->Destroy();
-		delete m_VolumeData;
+		m_DensityVolumeData->Destroy();
+		delete m_DensityVolumeData;
+
+		m_LaplacianVolumeData->Destroy();
+		delete m_LaplacianVolumeData;
 
 		m_Density3DTex->Destroy();
 		delete m_Density3DTex;
+
+		m_Laplacian3DTex->Destroy();
+		delete m_Laplacian3DTex;
 
 		m_HdrEnvMap->Destroy();
 		delete m_HdrEnvMap;
@@ -105,7 +113,7 @@ namespace en
 
 	const VolumeData* HpmScene::GetVolumeData() const
 	{
-		return m_VolumeData;
+		return m_DensityVolumeData;
 	}
 
 	const HdrEnvMap* HpmScene::GetHdrEnvMap() const

@@ -5,11 +5,12 @@
 #include <engine/graphics/vulkan/Buffer.hpp>
 #include <array>
 #include <openvdb/openvdb.h>
+#include <openvdb/tools/GridOperators.h>
 #include <filesystem>
 
 namespace en::vk
 {
-	Texture3D Texture3D::FromVDB(const std::string& fileName)
+	Texture3D Texture3D::FromVDB(const std::string& fileName, vk::Texture3D** density3DTex, vk::Texture3D** laplacian3DTex)
 	{
 		// Check if file exists
 		if (!std::filesystem::exists(fileName))
@@ -47,37 +48,70 @@ namespace en::vk
 		openvdb::Vec3i boxExtent = boxMax - boxMin + openvdb::Vec3i(1);
 		const size_t uniformVoxelCount = boxExtent.x() * boxExtent.y() * boxExtent.z();
 		
-		// Create 3d float array
-		std::vector<std::vector<std::vector<float>>> data(boxExtent.x());
-		for (std::vector<std::vector<float>>& vvf : data)
+		// Create 3d float array for density
+		std::vector<std::vector<std::vector<float>>> densityData(boxExtent.x());
+		for (std::vector<std::vector<float>>& vvf : densityData)
 		{
 			vvf.resize(boxExtent.y());
 			for (std::vector<float>& vf : vvf) { vf.resize(boxExtent.z()); }
 		}
 
-		// Read data from grid
-		float maxVal = 0.0;
+		// Read density data from grid
+		float maxDensityVal = 0.0;
 		for (auto valIt = densityGrid->cbeginValueOn(); valIt; ++valIt)
 		{
 			const float value = valIt.getValue();
-			if (value > maxVal) { maxVal = value; }
+			if (value > maxDensityVal) { maxDensityVal = value; }
 			
 			openvdb::CoordBBox bBox;
 			valIt.getBoundingBox(bBox);
 			for (auto bBoxIt = bBox.begin(); bBoxIt; ++bBoxIt)
 			{
 				openvdb::Vec3i bBoxItPos = (*bBoxIt).asVec3i() - boxMin;
-				data[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = value;
+				densityData[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = value;
 			}
 		}
 
-		if (maxVal != 0.0 && maxVal != 1.0) { Log::Error("VDB is not normalized", true); }
+		if (maxDensityVal != 0.0 && maxDensityVal != 1.0) { Log::Error("VDB is not normalized", true); }
 
-		// Return texture
-		return Texture3D(
-			data, 
+
+		// Apply laplacian filter to density grid
+		openvdb::tools::Laplacian<openvdb::FloatGrid> laplacian(*densityGrid);
+		densityGrid = laplacian.process();
+
+		// Create 3d float array for laplacian
+		std::vector<std::vector<std::vector<float>>> laplacianData(boxExtent.x());
+		for (std::vector<std::vector<float>>& vvf : laplacianData)
+		{
+			vvf.resize(boxExtent.y());
+			for (std::vector<float>& vf : vvf) { vf.resize(boxExtent.z()); }
+		}
+
+		// Read laplacian data from grid
+		for (auto valIt = densityGrid->cbeginValueOn(); valIt; ++valIt)
+		{
+			const float value = valIt.getValue();
+
+			openvdb::CoordBBox bBox;
+			valIt.getBoundingBox(bBox);
+			for (auto bBoxIt = bBox.begin(); bBoxIt; ++bBoxIt)
+			{
+				openvdb::Vec3i bBoxItPos = (*bBoxIt).asVec3i() - boxMin;
+				laplacianData[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = value;
+			}
+		}
+
+		// Create output 3D textures
+		*density3DTex = new Texture3D(
+			densityData, 
 			VK_FILTER_NEAREST, 
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
+			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+
+		*laplacian3DTex = new Texture3D(
+			laplacianData,
+			VK_FILTER_NEAREST,
+			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
 			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 	}
 

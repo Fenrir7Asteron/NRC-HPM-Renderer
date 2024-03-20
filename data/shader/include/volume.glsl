@@ -37,3 +37,8 @@ float getDensity(vec3 pos)
 {
 	return VOLUME_DENSITY_FACTOR * texture(densityTex, get_sky_uvw(pos)).x;
 }
+
+float getLaplacian(vec3 pos)
+{
+	return VOLUME_DENSITY_FACTOR * texture(laplacianTex, get_sky_uvw(pos)).x;
+}
