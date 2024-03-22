@@ -518,7 +518,7 @@ int main(int argc, char** argv)
 		myargv = { 
 			"NRC-HPM-Renderer", 
 			"RelativeL2Luminance", "Adam", "0.01", "0.99",
-			"0", "0", 
+			"0", "0", "0",
 			"64", "6", "21", "14", "4",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",

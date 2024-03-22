@@ -8,9 +8,10 @@ namespace en
 	{
 	}
 
-	AppConfig::NNEncodingConfig::NNEncodingConfig(uint32_t posID, uint32_t dirID) :
+	AppConfig::NNEncodingConfig::NNEncodingConfig(uint32_t posID, uint32_t dirID, uint32_t cloudInfoID) :
 		posID(posID),
-		dirID(dirID)
+		dirID(dirID),
+		cloudInfoID(cloudInfoID)
 	{
 		nlohmann::json posEncoding;
 		switch (posID)
@@ -79,11 +80,39 @@ namespace en
 			break;
 		}
 
+		nlohmann::json cloudInfoEncoding;
+		switch (cloudInfoID)
+		{
+		case 0:
+			cloudInfoEncoding = {
+				{"otype", "OneBlob"},
+				{"n_dims_to_encode", 1},
+				{"n_bins", 4},
+			};
+			break;
+		case 1:
+			cloudInfoEncoding = {
+				{"otype", "Identity"},
+				{"n_dims_to_encode", 1}
+			};
+			break;
+		case 2:
+			cloudInfoEncoding = {
+				{"otype", "TriangleWave"},
+				{"n_dims_to_encode", 1},
+				{"n_frequencies", 4}
+			};
+			break;
+		default:
+			Log::Error("NNEncodingConfig cloudInfoID is invalid", true);
+			break;
+		}
+
 		jsonConfig = { "encoding", {
 			{"otype", "Composite"},
 			{"reduction", "Concatenation"},
-			{"nested", { posEncoding, dirEncoding }}
-		}};
+			{"nested", { posEncoding, dirEncoding, cloudInfoEncoding }}
+		} };
 	}
 
 	AppConfig::HpmSceneConfig::HpmSceneConfig()
@@ -153,7 +182,7 @@ namespace en
 
 	AppConfig::AppConfig(const std::vector<char*>& argv)
 	{
-		if (argv.size() != 19) { Log::Error("Argument count does not match requirements for AppConfig", true); }
+		if (argv.size() != 20) { Log::Error("Argument count does not match requirements for AppConfig", true); }
 
 		size_t index = 1;
 
@@ -164,7 +193,8 @@ namespace en
 		
 		const uint32_t posID = std::stoi(argv[index++]);
 		const uint32_t dirID = std::stoi(argv[index++]);
-		encoding = NNEncodingConfig(posID, dirID);
+		const uint32_t cloudInfoID = std::stoi(argv[index++]);
+		encoding = NNEncodingConfig(posID, dirID, cloudInfoID);
 		
 		nnWidth = std::stoi(argv[index++]);
 		nnDepth = std::stoi(argv[index++]);
@@ -191,6 +221,7 @@ namespace en
 		str += std::to_string(emaDecay) + "_";
 		str += std::to_string(encoding.posID) + "_";
 		str += std::to_string(encoding.dirID) + "_";
+		str += std::to_string(encoding.cloudInfoID) + "_";
 		str += std::to_string(nnWidth) + "_";
 		str += std::to_string(nnDepth) + "_";
 		str += std::to_string(log2InferBatchSize) + "_";
@@ -212,7 +243,7 @@ namespace en
 		ImGui::Text(optimizer.c_str());
 		ImGui::Text("Learning rate %f", learningRate);
 		ImGui::Text("EMA Decay %f", emaDecay);
-		ImGui::Text("Encoding (%d, %d)", encoding.posID, encoding.dirID);
+		ImGui::Text("Encoding (%d, %d, %d)", encoding.posID, encoding.dirID, encoding.cloudInfoID);
 		ImGui::Text("NN Width %d", nnWidth);
 		ImGui::Text("NN Depth %d", nnDepth);
 		ImGui::Text("Batch Sizes (%d, %d)", log2InferBatchSize, log2TrainBatchSize);

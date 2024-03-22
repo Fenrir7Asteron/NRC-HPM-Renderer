@@ -13,11 +13,12 @@ namespace en
 			// TODO
 			uint32_t posID;
 			uint32_t dirID;
+			uint32_t cloudInfoID;
 
 			nlohmann::json jsonConfig;
 
 			NNEncodingConfig();
-			NNEncodingConfig(uint32_t posID, uint32_t dirID);
+			NNEncodingConfig(uint32_t posID, uint32_t dirID, uint32_t cloudInfoID);
 		};
 
 		struct HpmSceneConfig

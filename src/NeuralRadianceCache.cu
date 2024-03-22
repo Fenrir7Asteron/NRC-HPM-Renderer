@@ -5,7 +5,7 @@
 
 namespace en
 {
-	uint32_t NeuralRadianceCache::sc_InputCount = 5;
+	uint32_t NeuralRadianceCache::sc_InputCount = 6;
 	uint32_t NeuralRadianceCache::sc_OutputCount = 3;
 
 	NeuralRadianceCache::NeuralRadianceCache(const AppConfig& appConfig) :
