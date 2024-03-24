@@ -180,6 +180,10 @@ namespace en
 		VkDeviceMemory m_NrcRayDirImageMemory;
 		VkImageView m_NrcRayDirImageView;
 
+		VkImage m_NrcLightingImage;
+		VkDeviceMemory m_NrcLightingImageMemory;
+		VkImageView m_NrcLightingImageView;
+
 		VkDescriptorSet m_DescSet;
 
 		const float c_TimestampPeriodInMS = VulkanAPI::GetTimestampPeriod() * 1e-6f;
@@ -216,6 +220,7 @@ namespace en
 		void CreatePrimaryRayInfoImage(VkDevice device);
 		void CreateNrcRayOriginImage(VkDevice device);
 		void CreateNrcRayDirImage(VkDevice device);
+		void CreateNrcLightingImage(VkDevice device);
 
 		void AllocateAndUpdateDescriptorSet(VkDevice device);
 

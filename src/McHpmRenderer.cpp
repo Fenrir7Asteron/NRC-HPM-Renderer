@@ -411,7 +411,6 @@ namespace en
 		std::vector<VkDescriptorSetLayout> layouts = {
 			Camera::GetDescriptorSetLayout(),
 			VolumeData::GetDescriptorSetLayout(),
-			VolumeData::GetDescriptorSetLayout(),
 			DirLight::GetDescriptorSetLayout(),
 			PointLight::GetDescriptorSetLayout(),
 			HdrEnvMap::GetDescriptorSetLayout(),

@@ -10,7 +10,7 @@ namespace en::vk
 	class Texture3D
 	{
 	public:
-		static Texture3D FromVDB(const std::string& fileName, vk::Texture3D** density3DTex, vk::Texture3D** gradient3DTex);
+		static Texture3D FromVDB(const std::string& fileName, vk::Texture3D** density3DTex);
 
 		Texture3D(
 			const std::vector<std::vector<std::vector<float>>>& data, 

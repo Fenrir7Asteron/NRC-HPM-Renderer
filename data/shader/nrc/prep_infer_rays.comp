@@ -4,7 +4,7 @@
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
-void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 dir)
+void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 dir, const vec3 lightingAtNrcStart)
 {
 	// Norm pos
 	const vec3 normPos = (pos / skySize) + (skySize / 2.0);
@@ -15,19 +15,15 @@ void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 
 	const float phi = acos(dir.y / length(dir.xz));
 	const float normPhi = phi / PI;
 
-	// Calc gradient
-	const float invMaxDensity = 1.0 / VOLUME_DENSITY_FACTOR;
-	const vec3 gradient = getGradient(pos) * invMaxDensity;
-
 	// Store infer input
 	nrcInferInput[linearPixelIndex].posX = normPos.x;
 	nrcInferInput[linearPixelIndex].posY = normPos.y;
 	nrcInferInput[linearPixelIndex].posZ = normPos.z;
 	nrcInferInput[linearPixelIndex].theta = normTheta;
 	nrcInferInput[linearPixelIndex].phi = normPhi;
-	nrcInferInput[linearPixelIndex].gradientX = gradient.x;
-	nrcInferInput[linearPixelIndex].gradientY = gradient.y;
-	nrcInferInput[linearPixelIndex].gradientZ = gradient.z;
+	nrcInferInput[linearPixelIndex].lightingX = lightingAtNrcStart.x;
+	nrcInferInput[linearPixelIndex].lightingY = lightingAtNrcStart.y;
+	nrcInferInput[linearPixelIndex].lightingY = lightingAtNrcStart.z;
 }
 
 void main()
@@ -45,7 +41,8 @@ void main()
 	// Store neural ray info
 	const vec3 rayOrigin = imageLoad(nrcRayOriginImage, imageCoord).xyz;
 	const vec3 rayDir = imageLoad(nrcRayDirImage, imageCoord).xyz;
-	StoreNrcInferInput(linearPixelIndex, rayOrigin, rayDir);
+	const vec3 lightingAtNrcStart = imageLoad(nrcLightingImage, imageCoord).xyz;
+	StoreNrcInferInput(linearPixelIndex, rayOrigin, rayDir, lightingAtNrcStart);
 
 	// Increment batch valid sample counter
 	const uint linearBatchIndex = linearPixelIndex / INFER_BATCH_SIZE;

@@ -12,9 +12,7 @@ layout(set = 0, binding = 1) uniform camera_t
 
 layout(set = 1, binding = 0) uniform sampler3D densityTex;
 
-layout(set = 2, binding = 0) uniform sampler3D gradientTex;
-
-layout(set = 3, binding = 0) uniform dir_light_t
+layout(set = 2, binding = 0) uniform dir_light_t
 {
 	vec3 color;
 	float zenith;
@@ -23,28 +21,30 @@ layout(set = 3, binding = 0) uniform dir_light_t
 	float strength;
 } dir_light;
 
-layout(set = 4, binding = 0) uniform PointLight
+layout(set = 3, binding = 0) uniform PointLight
 {
 	vec3 pos;
 	float strength;
 	vec3 color;
 } pointLight;
 
-layout(set = 5, binding = 0) uniform sampler2D hdrEnvMap;
+layout(set = 4, binding = 0) uniform sampler2D hdrEnvMap;
 
-layout(set = 5, binding = 1) uniform sampler2D hdrEnvMapInvCdfX;
+layout(set = 4, binding = 1) uniform sampler2D hdrEnvMapInvCdfX;
 
-layout(set = 5, binding = 2) uniform sampler1D hdrEnvMapInvCdfY;
+layout(set = 4, binding = 2) uniform sampler1D hdrEnvMapInvCdfY;
 
-layout(set = 6, binding = 0, rgba32f) uniform image2D outputImage;
+layout(set = 5, binding = 0, rgba32f) uniform image2D outputImage;
 
-layout(set = 6, binding = 1, rgba32f) uniform image2D primaryRayColorImage;
+layout(set = 5, binding = 1, rgba32f) uniform image2D primaryRayColorImage;
 
-layout(set = 6, binding = 2, rgba32f) uniform image2D primaryRayInfoImage;
+layout(set = 5, binding = 2, rgba32f) uniform image2D primaryRayInfoImage;
 
-layout(set = 6, binding = 3, rgba32f) uniform image2D nrcRayOriginImage;
+layout(set = 5, binding = 3, rgba32f) uniform image2D nrcRayOriginImage;
 
-layout(set = 6, binding = 4, rgba32f) uniform image2D nrcRayDirImage;
+layout(set = 5, binding = 4, rgba32f) uniform image2D nrcRayDirImage;
+
+layout(set = 5, binding = 5, rgba32f) uniform image2D nrcLightingImage;
 
 struct NrcInput
 {
@@ -53,9 +53,9 @@ struct NrcInput
 	float posZ;
 	float theta;
 	float phi;
-	float gradientX;
-	float gradientY;
-	float gradientZ;
+	float lightingX;
+	float lightingY;
+	float lightingZ;
 };
 
 struct NrcOutput
@@ -65,27 +65,27 @@ struct NrcOutput
 	float b;
 };
 
-layout(std430, set = 6, binding = 5) buffer NrcInferInput
+layout(std430, set = 5, binding = 6) buffer NrcInferInput
 {
 	NrcInput nrcInferInput[];
 };
 
-layout(std430, set = 6, binding = 6) buffer NrcInferOutput
+layout(std430, set = 5, binding = 7) buffer NrcInferOutput
 {
 	NrcOutput nrcInferOutput[];
 };
 
-layout(std430, set = 6, binding = 7) buffer NrcTrainInput
+layout(std430, set = 5, binding = 8) buffer NrcTrainInput
 {
 	NrcInput nrcTrainInput[];
 };
 
-layout(std430, set = 6, binding = 8) buffer NrcTrainTarget
+layout(std430, set = 5, binding = 9) buffer NrcTrainTarget
 {
 	NrcOutput nrcTrainTarget[];
 };
 
-layout(std430, set = 6, binding = 9) buffer NrcInferFilter
+layout(std430, set = 5, binding = 10) buffer NrcInferFilter
 {
 	uint nrcInferFilter[];
 };
@@ -101,14 +101,14 @@ struct RayInfo
 	float dirZ;
 };
 
-layout(std430, set = 6, binding = 10) buffer NrcTrainRing
+layout(std430, set = 5, binding = 11) buffer NrcTrainRing
 {
 	uint nrcTrainRingHead;
 	uint nrcTrainRingTail;
 	RayInfo nrcTrainRingBuffer[];
 };
 
-layout(set = 6, binding = 11) uniform Renderer
+layout(set = 5, binding = 12) uniform Renderer
 {
 	vec4 random;
 	uint showNrc;

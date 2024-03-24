@@ -30,7 +30,7 @@ void LoadFromRingBuffer(out vec3 pos, out vec3 dir)
 	dir.z = nrcTrainRingBuffer[prevTail].dirZ;
 }
 
-void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 dir, vec3 target, const bool didScatter)
+void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 dir, const vec3 lightingAtNrcStart, vec3 target, const bool didScatter)
 {
 	// Calc index
 	const uint x = trainImageCoord.x;
@@ -46,19 +46,15 @@ void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 d
 	const float phi = acos(dir.y / length(dir.xz));
 	const float normPhi = phi / PI;
 
-	// Calc gradient
-	const float invMaxDensity = 1.0 / VOLUME_DENSITY_FACTOR;
-	const vec3 gradient = getGradient(pos) * invMaxDensity;
-
 	// Store train input
 	nrcTrainInput[linearPixelIndex].posX = normPos.x;
 	nrcTrainInput[linearPixelIndex].posY = normPos.y;
 	nrcTrainInput[linearPixelIndex].posZ = normPos.z;
 	nrcTrainInput[linearPixelIndex].theta = normTheta;
 	nrcTrainInput[linearPixelIndex].phi = normPhi;
-	nrcInferInput[linearPixelIndex].gradientX = gradient.x;
-	nrcInferInput[linearPixelIndex].gradientY = gradient.y;
-	nrcInferInput[linearPixelIndex].gradientZ = gradient.z;
+	nrcTrainInput[linearPixelIndex].lightingX = lightingAtNrcStart.x;
+	nrcTrainInput[linearPixelIndex].lightingY = lightingAtNrcStart.y;
+	nrcTrainInput[linearPixelIndex].lightingY = lightingAtNrcStart.z;
 
 	// Store train target
 	//target = log(vec3(1.0) + target);
@@ -69,7 +65,7 @@ void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 d
 	nrcTrainTarget[linearPixelIndex].b = target.z;
 
 	// If didScatter -> store in ring buffer
-	if (didScatter) { StoreInRingBuffer(pos, dir); }
+	if (didScatter && TRAIN_RING_BUF_SIZE > 0) { StoreInRingBuffer(pos, dir); }
 }
 
 vec4 TracePath(const vec3 rayOrigin, const vec3 rayDir)
@@ -131,6 +127,8 @@ void main()
 	{
 		LoadFromRingBuffer(rayOrigin, rayDir);
 	}
+
+	vec3 lightingAtNrcStart = imageLoad(nrcLightingImage, renderImageCoord).xyz;
 	
 	// Calculate target
 	vec3 target = vec3(0.0);
@@ -138,8 +136,5 @@ void main()
 	target /= float(TRAIN_SPP);
 
 	// Store train data
-	if (TRAIN_RING_BUF_SIZE > 0)
-	{
-		StoreNrcTrainData(trainImageCoord, rayOrigin, rayDir, target, didScatter);
-	}
+	StoreNrcTrainData(trainImageCoord, rayOrigin, rayDir, lightingAtNrcStart, target, didScatter);
 }

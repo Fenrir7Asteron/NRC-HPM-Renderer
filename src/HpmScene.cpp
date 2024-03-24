@@ -42,15 +42,13 @@ namespace en
 
 		// Load data
 		en::Log::Info("Loading volume data");
-		vk::Texture3D::FromVDB("data/volume/wdas_cloud_quarter.vdb", &m_Density3DTex, &m_Gradient3DTex);
+		vk::Texture3D::FromVDB("data/volume/wdas_cloud_quarter.vdb", &m_Density3DTex);
 		m_DensityVolumeData = new VolumeData(m_Density3DTex, appConfig.scene.density, 0.8f);
-		m_GradientVolumeData = new VolumeData(m_Gradient3DTex, appConfig.scene.density, 0.8f);
 
 		// Store desc sets
 		en::Log::Info("Geting scene descriptors");
 		m_DescSets = {
 			m_DensityVolumeData->GetDescriptorSet(),
-			m_GradientVolumeData->GetDescriptorSet(),
 			m_DirLight->GetDescriptorSet(),
 			m_PointLight->GetDescriptorSet(),
 			m_HdrEnvMap->GetDescriptorSet()
@@ -84,14 +82,8 @@ namespace en
 		m_DensityVolumeData->Destroy();
 		delete m_DensityVolumeData;
 
-		m_GradientVolumeData->Destroy();
-		delete m_GradientVolumeData;
-
 		m_Density3DTex->Destroy();
 		delete m_Density3DTex;
-
-		m_Gradient3DTex->Destroy();
-		delete m_Gradient3DTex;
 
 		m_HdrEnvMap->Destroy();
 		delete m_HdrEnvMap;

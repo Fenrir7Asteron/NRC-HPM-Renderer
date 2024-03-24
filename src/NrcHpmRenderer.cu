@@ -102,6 +102,13 @@ namespace en
 		nrcRayDirImageBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		nrcRayDirImageBinding.pImmutableSamplers = nullptr;
 
+		VkDescriptorSetLayoutBinding nrcLightingImageBinding;
+		nrcLightingImageBinding.binding = bindingIndex++;
+		nrcLightingImageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		nrcLightingImageBinding.descriptorCount = 1;
+		nrcLightingImageBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		nrcLightingImageBinding.pImmutableSamplers = nullptr;
+
 		VkDescriptorSetLayoutBinding nrcInferInputBufferBinding;
 		nrcInferInputBufferBinding.binding = bindingIndex++;
 		nrcInferInputBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -157,6 +164,7 @@ namespace en
 			primaryRayInfoImageBinding,
 			nrcRayOriginImageBinding,
 			nrcRayDirImageBinding,
+			nrcLightingImageBinding,
 			nrcInferInputBufferBinding,
 			nrcInferOutputBufferBinding,
 			nrcTrainInputBufferBinding,
@@ -179,10 +187,10 @@ namespace en
 		// Create desc pool
 		VkDescriptorPoolSize storageImagePS;
 		storageImagePS.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		storageImagePS.descriptorCount = 5;
+		storageImagePS.descriptorCount = 6;
 
 		VkDescriptorPoolSize storageBufferPS;
-		storageBufferPS.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		storageBufferPS.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 		storageBufferPS.descriptorCount = 6;
 
 		VkDescriptorPoolSize uniformBufferPS;
@@ -287,6 +295,7 @@ namespace en
 		CreatePrimaryRayInfoImage(device);
 		CreateNrcRayOriginImage(device);
 		CreateNrcRayDirImage(device);
+		CreateNrcLightingImage(device);
 
 		AllocateAndUpdateDescriptorSet(device);
 
@@ -361,6 +370,10 @@ namespace en
 		m_UniformBuffer.Destroy();
 
 		vkDestroyQueryPool(device, m_QueryPool, nullptr);
+
+		vkDestroyImageView(device, m_NrcLightingImageView, nullptr);
+		vkFreeMemory(device, m_NrcLightingImageMemory, nullptr);
+		vkDestroyImage(device, m_NrcLightingImage, nullptr);
 
 		vkDestroyImageView(device, m_NrcRayDirImageView, nullptr);
 		vkFreeMemory(device, m_NrcRayDirImageMemory, nullptr);
@@ -898,7 +911,6 @@ namespace en
 
 		std::vector<VkDescriptorSetLayout> layouts = {
 			Camera::GetDescriptorSetLayout(),
-			VolumeData::GetDescriptorSetLayout(),
 			VolumeData::GetDescriptorSetLayout(),
 			DirLight::GetDescriptorSetLayout(),
 			PointLight::GetDescriptorSetLayout(),
@@ -1718,6 +1730,111 @@ namespace en
 		ASSERT_VULKAN(result);
 	}
 
+	void NrcHpmRenderer::CreateNrcLightingImage(VkDevice device)
+	{
+		VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+
+		// Create Image
+		VkImageCreateInfo imageCI;
+		imageCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		imageCI.pNext = nullptr;
+		imageCI.flags = 0;
+		imageCI.imageType = VK_IMAGE_TYPE_2D;
+		imageCI.format = format;
+		imageCI.extent = { m_RenderWidth, m_RenderHeight, 1 };
+		imageCI.mipLevels = 1;
+		imageCI.arrayLayers = 1;
+		imageCI.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageCI.tiling = VK_IMAGE_TILING_OPTIMAL;
+		imageCI.usage = VK_IMAGE_USAGE_STORAGE_BIT;
+		imageCI.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		imageCI.queueFamilyIndexCount = 0;
+		imageCI.pQueueFamilyIndices = nullptr;
+		imageCI.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+
+		VkResult result = vkCreateImage(device, &imageCI, nullptr, &m_NrcLightingImage);
+		ASSERT_VULKAN(result);
+
+		// Image Memory
+		VkMemoryRequirements memoryRequirements;
+		vkGetImageMemoryRequirements(device, m_NrcLightingImage, &memoryRequirements);
+
+		VkMemoryAllocateInfo allocateInfo;
+		allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocateInfo.pNext = nullptr;
+		allocateInfo.allocationSize = memoryRequirements.size;
+		allocateInfo.memoryTypeIndex = VulkanAPI::FindMemoryType(
+			memoryRequirements.memoryTypeBits,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		result = vkAllocateMemory(device, &allocateInfo, nullptr, &m_NrcLightingImageMemory);
+		ASSERT_VULKAN(result);
+
+		result = vkBindImageMemory(device, m_NrcLightingImage, m_NrcLightingImageMemory, 0);
+		ASSERT_VULKAN(result);
+
+		// Create image view
+		VkImageViewCreateInfo imageViewCI;
+		imageViewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		imageViewCI.pNext = nullptr;
+		imageViewCI.flags = 0;
+		imageViewCI.image = m_NrcLightingImage;
+		imageViewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+		imageViewCI.format = format;
+		imageViewCI.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCI.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCI.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCI.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+		imageViewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageViewCI.subresourceRange.baseMipLevel = 0;
+		imageViewCI.subresourceRange.levelCount = 1;
+		imageViewCI.subresourceRange.baseArrayLayer = 0;
+		imageViewCI.subresourceRange.layerCount = 1;
+
+		result = vkCreateImageView(device, &imageViewCI, nullptr, &m_NrcLightingImageView);
+		ASSERT_VULKAN(result);
+
+		// Change image layout
+		VkCommandBufferBeginInfo beginInfo;
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.pNext = nullptr;
+		beginInfo.flags = 0;
+		beginInfo.pInheritanceInfo = nullptr;
+
+		result = vkBeginCommandBuffer(m_RandomTasksCmdBuf, &beginInfo);
+		ASSERT_VULKAN(result);
+
+		vk::CommandRecorder::ImageLayoutTransfer(
+			m_RandomTasksCmdBuf,
+			m_NrcLightingImage,
+			VK_IMAGE_LAYOUT_PREINITIALIZED,
+			VK_IMAGE_LAYOUT_GENERAL,
+			VK_ACCESS_NONE,
+			VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+		result = vkEndCommandBuffer(m_RandomTasksCmdBuf);
+		ASSERT_VULKAN(result);
+
+		VkSubmitInfo submitInfo;
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pNext = nullptr;
+		submitInfo.waitSemaphoreCount = 0;
+		submitInfo.pWaitSemaphores = nullptr;
+		submitInfo.pWaitDstStageMask = nullptr;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_RandomTasksCmdBuf;
+		submitInfo.signalSemaphoreCount = 0;
+		submitInfo.pSignalSemaphores = nullptr;
+
+		VkQueue queue = VulkanAPI::GetGraphicsQueue();
+		result = vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+		ASSERT_VULKAN(result);
+		result = vkQueueWaitIdle(queue);
+		ASSERT_VULKAN(result);
+	}
+
 	void NrcHpmRenderer::AllocateAndUpdateDescriptorSet(VkDevice device)
 	{
 		// Allocate
@@ -1819,6 +1936,23 @@ namespace en
 		nrcRayDirImageWrite.pImageInfo = &nrcRayDirImageInfo;
 		nrcRayDirImageWrite.pBufferInfo = nullptr;
 		nrcRayDirImageWrite.pTexelBufferView = nullptr;
+
+		VkDescriptorImageInfo nrcLightingImageInfo;
+		nrcLightingImageInfo.sampler = VK_NULL_HANDLE;
+		nrcLightingImageInfo.imageView = m_NrcLightingImageView;
+		nrcLightingImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+		VkWriteDescriptorSet nrcLightingImageWrite;
+		nrcLightingImageWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		nrcLightingImageWrite.pNext = nullptr;
+		nrcLightingImageWrite.dstSet = m_DescSet;
+		nrcLightingImageWrite.dstBinding = bindingIndex++;
+		nrcLightingImageWrite.dstArrayElement = 0;
+		nrcLightingImageWrite.descriptorCount = 1;
+		nrcLightingImageWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+		nrcLightingImageWrite.pImageInfo = &nrcLightingImageInfo;
+		nrcLightingImageWrite.pBufferInfo = nullptr;
+		nrcLightingImageWrite.pTexelBufferView = nullptr;
 
 		// Storage buffer writes
 		VkDescriptorBufferInfo nrcInferInputBufferInfo;
@@ -1948,6 +2082,7 @@ namespace en
 			primaryRayInfoImageWrite,
 			nrcRayOriginImageWrite,
 			nrcRayDirImageWrite,
+			nrcLightingImageWrite,
 			nrcInferInputBufferWrite,
 			nrcInferOutputBufferWrite,
 			nrcTrainInputBufferWrite,

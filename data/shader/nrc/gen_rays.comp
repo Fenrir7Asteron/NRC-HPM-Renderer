@@ -10,6 +10,7 @@ vec4 TracePath(const ivec2 imageCoord, const vec3 rayOrigin, const vec3 rayDir, 
 
 	const vec3 entry = find_entry_exit(rayOrigin, rayDir)[0];
 	
+	vec3 sceneLighting = vec3(0.0);
 	vec3 currentPoint = entry;
 	vec3 currentDir = rayDir;
 	
@@ -29,7 +30,7 @@ vec4 TracePath(const ivec2 imageCoord, const vec3 rayOrigin, const vec3 rayDir, 
 		factor *= 0.5; // * 0.5 because L_s is being approximated by 2 samples
 
 		// Lighting
-		const vec3 sceneLighting = TraceScene(currentPoint, currentDir) * factor;
+		sceneLighting = TraceScene(currentPoint, currentDir) * factor;
 		scatteredLight += sceneLighting; // Phase and transmittance are IS
 
 		// Find new dir by IS the PF
@@ -45,6 +46,7 @@ vec4 TracePath(const ivec2 imageCoord, const vec3 rayOrigin, const vec3 rayDir, 
 	// Store nrc ray info
 	imageStore(nrcRayOriginImage, imageCoord, vec4(currentPoint, 0.0));
 	imageStore(nrcRayDirImage, imageCoord, vec4(currentDir, 0.0));
+	imageStore(nrcLightingImage, imageCoord, vec4(sceneLighting, 0.0));
 
 	// Return prematurly terminated ray color
 	return vec4(scatteredLight, factor);

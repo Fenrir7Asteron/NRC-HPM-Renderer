@@ -10,7 +10,7 @@
 
 namespace en::vk
 {
-	Texture3D Texture3D::FromVDB(const std::string& fileName, vk::Texture3D** density3DTex, vk::Texture3D** gradient3DTex)
+	Texture3D Texture3D::FromVDB(const std::string& fileName, vk::Texture3D** density3DTex)
 	{
 		// Check if file exists
 		if (!std::filesystem::exists(fileName))
@@ -74,44 +74,11 @@ namespace en::vk
 
 		if (maxDensityVal != 0.0 && maxDensityVal != 1.0) { Log::Error("VDB is not normalized", true); }
 
-
-		// Apply gradient filter to density grid
-		openvdb::tools::Gradient<openvdb::FloatGrid> gradient(*densityGrid);
-		openvdb::Vec3SGrid::Ptr gradientGrid = gradient.process();
-
-		// Create 3d float array for gradient
-		std::vector<std::vector<std::vector<glm::vec3>>> gradientData(boxExtent.x());
-		for (std::vector<std::vector<glm::vec3>>& vvf : gradientData)
-		{
-			vvf.resize(boxExtent.y());
-			for (std::vector<glm::vec3>& vf : vvf) { vf.resize(boxExtent.z()); }
-		}
-
-		// Read gradient data from grid
-		for (auto valIt = gradientGrid->cbeginValueOn(); valIt; ++valIt)
-		{
-			const openvdb::Vec3f value = valIt.getValue();
-
-			openvdb::CoordBBox bBox;
-			valIt.getBoundingBox(bBox);
-			for (auto bBoxIt = bBox.begin(); bBoxIt; ++bBoxIt)
-			{
-				openvdb::Vec3i bBoxItPos = (*bBoxIt).asVec3i() - boxMin;
-				gradientData[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = glm::vec3( value.x(), value.y(), value.z());
-			}
-		}
-
 		// Create output 3D textures
 		*density3DTex = new Texture3D(
 			densityData, 
 			VK_FILTER_NEAREST, 
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
-			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
-
-		*gradient3DTex = new Texture3D(
-			gradientData,
-			VK_FILTER_NEAREST,
-			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
 			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 	}
 
