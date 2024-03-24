@@ -38,9 +38,9 @@ namespace en
 		HdrEnvMap* m_HdrEnvMap = nullptr;
 
 		vk::Texture3D* m_Density3DTex = nullptr;
-		vk::Texture3D* m_Laplacian3DTex = nullptr;
+		vk::Texture3D* m_Gradient3DTex = nullptr;
 		VolumeData* m_DensityVolumeData = nullptr;
-		VolumeData* m_LaplacianVolumeData = nullptr;
+		VolumeData* m_GradientVolumeData = nullptr;
 
 		std::vector<VkDescriptorSet> m_DescSets;
 	};

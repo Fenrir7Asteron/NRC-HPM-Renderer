@@ -10,7 +10,7 @@
 
 namespace en::vk
 {
-	Texture3D Texture3D::FromVDB(const std::string& fileName, vk::Texture3D** density3DTex, vk::Texture3D** laplacian3DTex)
+	Texture3D Texture3D::FromVDB(const std::string& fileName, vk::Texture3D** density3DTex, vk::Texture3D** gradient3DTex)
 	{
 		// Check if file exists
 		if (!std::filesystem::exists(fileName))
@@ -75,29 +75,29 @@ namespace en::vk
 		if (maxDensityVal != 0.0 && maxDensityVal != 1.0) { Log::Error("VDB is not normalized", true); }
 
 
-		// Apply laplacian filter to density grid
-		openvdb::tools::Laplacian<openvdb::FloatGrid> laplacian(*densityGrid);
-		densityGrid = laplacian.process();
+		// Apply gradient filter to density grid
+		openvdb::tools::Gradient<openvdb::FloatGrid> gradient(*densityGrid);
+		openvdb::Vec3SGrid::Ptr gradientGrid = gradient.process();
 
-		// Create 3d float array for laplacian
-		std::vector<std::vector<std::vector<float>>> laplacianData(boxExtent.x());
-		for (std::vector<std::vector<float>>& vvf : laplacianData)
+		// Create 3d float array for gradient
+		std::vector<std::vector<std::vector<glm::vec3>>> gradientData(boxExtent.x());
+		for (std::vector<std::vector<glm::vec3>>& vvf : gradientData)
 		{
 			vvf.resize(boxExtent.y());
-			for (std::vector<float>& vf : vvf) { vf.resize(boxExtent.z()); }
+			for (std::vector<glm::vec3>& vf : vvf) { vf.resize(boxExtent.z()); }
 		}
 
-		// Read laplacian data from grid
-		for (auto valIt = densityGrid->cbeginValueOn(); valIt; ++valIt)
+		// Read gradient data from grid
+		for (auto valIt = gradientGrid->cbeginValueOn(); valIt; ++valIt)
 		{
-			const float value = valIt.getValue();
+			const openvdb::Vec3f value = valIt.getValue();
 
 			openvdb::CoordBBox bBox;
 			valIt.getBoundingBox(bBox);
 			for (auto bBoxIt = bBox.begin(); bBoxIt; ++bBoxIt)
 			{
 				openvdb::Vec3i bBoxItPos = (*bBoxIt).asVec3i() - boxMin;
-				laplacianData[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = value;
+				gradientData[bBoxItPos.x()][bBoxItPos.y()][bBoxItPos.z()] = glm::vec3( value.x(), value.y(), value.z());
 			}
 		}
 
@@ -108,8 +108,8 @@ namespace en::vk
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER, 
 			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
 
-		*laplacian3DTex = new Texture3D(
-			laplacianData,
+		*gradient3DTex = new Texture3D(
+			gradientData,
 			VK_FILTER_NEAREST,
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
 			VK_BORDER_COLOR_INT_OPAQUE_BLACK);
@@ -142,6 +142,40 @@ namespace en::vk
 					dataArray[index + 0] = value;
 					dataArray[index + 1] = value;
 					dataArray[index + 2] = value;
+					dataArray[index + 3] = 1;
+				}
+			}
+		}
+
+		LoadToDevice(dataArray.data(), filter, addressMode, borderColor);
+	}
+
+	Texture3D::Texture3D(
+		const std::vector<std::vector<std::vector<glm::vec3>>>& data,
+		VkFilter filter,
+		VkSamplerAddressMode addressMode,
+		VkBorderColor borderColor)
+		:
+		m_Width(data.size()),
+		m_Height(data[0].size()),
+		m_Depth(data[0][0].size()),
+		m_RealChannelCount(4),
+		m_ImageLayout(VK_IMAGE_LAYOUT_PREINITIALIZED)
+	{
+		// TODO: check for homogenous size
+
+		// Copy to linear buffer
+		std::vector<uint8_t> dataArray(m_Width * m_Height * m_Depth * 4);
+		for (uint32_t i = 0; i < m_Width; i++)
+		{
+			for (uint32_t j = 0; j < m_Height; j++)
+			{
+				for (uint32_t k = 0; k < m_Depth; k++)
+				{
+					uint32_t index = 4 * i + 4 * m_Width * j + 4 * m_Width * m_Height * k;
+					dataArray[index + 0] = static_cast<uint8_t>(data[i][j][k].x * 255.0f);
+					dataArray[index + 1] = static_cast<uint8_t>(data[i][j][k].y * 255.0f);
+					dataArray[index + 2] = static_cast<uint8_t>(data[i][j][k].z * 255.0f);
 					dataArray[index + 3] = 1;
 				}
 			}

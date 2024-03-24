@@ -5,7 +5,7 @@
 
 namespace en
 {
-	uint32_t NeuralRadianceCache::sc_InputCount = 6;
+	uint32_t NeuralRadianceCache::sc_InputCount = 8;
 	uint32_t NeuralRadianceCache::sc_OutputCount = 3;
 
 	NeuralRadianceCache::NeuralRadianceCache(const AppConfig& appConfig) :
@@ -58,9 +58,13 @@ namespace en
 		// Init big buffer
 		const uint32_t trainCount = m_TrainBatchCount * m_TrainBatchSize;
 
+		en::Log::Info("Creating infer input buffer");
 		m_InferInput = tcnn::GPUMatrix<float>(dCuInferInput, sc_InputCount, inferCount);
+		en::Log::Info("Creating infer output buffer");
 		m_InferOutput = tcnn::GPUMatrix<float>(dCuInferOutput, sc_OutputCount, inferCount);
+		en::Log::Info("Creating train input buffer");
 		m_TrainInput = tcnn::GPUMatrix<float>(dCuTrainInput, sc_InputCount, trainCount);
+		en::Log::Info("Creating train target buffer");
 		m_TrainTarget = tcnn::GPUMatrix<float>(dCuTrainTarget, sc_OutputCount, trainCount);
 
 		// Init infer buffers

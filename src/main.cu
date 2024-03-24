@@ -201,8 +201,10 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	// Init resources
 	en::Log::Info("Initializing rendering resources");
 
+	en::Log::Info("Initializing NeuralRadianceCache");
 	en::NeuralRadianceCache nrc(appConfig);
 
+	en::Log::Info("Initializing scene");
 	en::HpmScene hpmScene(appConfig);
 
 	const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);

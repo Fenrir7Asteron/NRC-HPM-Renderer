@@ -85,22 +85,33 @@ namespace en
 		{
 		case 0:
 			cloudInfoEncoding = {
-				{"otype", "OneBlob"},
-				{"n_dims_to_encode", 1},
-				{"n_bins", 4},
+				{"otype", "HashGrid"},
+				{"n_dims_to_encode", 3},
+				{"n_levels", 16},
+				{"n_features_per_level", 2},
+				{"log2_hashmap_size", 19},
+				{"base_resolution", 16},
+				{"per_level_scale", 2.0},
 			};
 			break;
 		case 1:
 			cloudInfoEncoding = {
 				{"otype", "Identity"},
-				{"n_dims_to_encode", 1}
+				{"n_dims_to_encode", 3}
 			};
 			break;
 		case 2:
 			cloudInfoEncoding = {
 				{"otype", "TriangleWave"},
-				{"n_dims_to_encode", 1},
-				{"n_frequencies", 4}
+				{"n_dims_to_encode", 3},
+				{"n_frequencies", 12}
+			};
+			break;
+		case 3:
+			cloudInfoEncoding = {
+				{"otype", "Frequency"},
+				{"n_dims_to_encode", 3},
+				{"n_frequencies", 12},
 			};
 			break;
 		default:

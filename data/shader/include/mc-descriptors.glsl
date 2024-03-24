@@ -12,7 +12,7 @@ layout(set = 0, binding = 1) uniform camera_t
 
 layout(set = 1, binding = 0) uniform sampler3D densityTex;
 
-layout(set = 2, binding = 0) uniform sampler3D laplacianTex;
+layout(set = 2, binding = 0) uniform sampler3D gradientTex;
 
 layout(set = 3, binding = 0) uniform dir_light_t
 {

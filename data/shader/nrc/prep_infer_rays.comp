@@ -15,9 +15,9 @@ void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 
 	const float phi = acos(dir.y / length(dir.xz));
 	const float normPhi = phi / PI;
 
-	// Calc laplacian
+	// Calc gradient
 	const float invMaxDensity = 1.0 / VOLUME_DENSITY_FACTOR;
-	const float laplacian = getLaplacian(pos) * invMaxDensity;
+	const vec3 gradient = getGradient(pos) * invMaxDensity;
 
 	// Store infer input
 	nrcInferInput[linearPixelIndex].posX = normPos.x;
@@ -25,7 +25,9 @@ void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 
 	nrcInferInput[linearPixelIndex].posZ = normPos.z;
 	nrcInferInput[linearPixelIndex].theta = normTheta;
 	nrcInferInput[linearPixelIndex].phi = normPhi;
-	nrcInferInput[linearPixelIndex].laplacian = laplacian;
+	nrcInferInput[linearPixelIndex].gradientX = gradient.x;
+	nrcInferInput[linearPixelIndex].gradientY = gradient.y;
+	nrcInferInput[linearPixelIndex].gradientZ = gradient.z;
 }
 
 void main()
