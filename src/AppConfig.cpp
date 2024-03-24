@@ -160,7 +160,7 @@ namespace en
 			dirLightStrength = 8.0f;
 			pointLightStrength = 0.0f;
 			hdrEnvMapPath = "";
-			hdrEnvMapStrength = 0.1;
+			hdrEnvMapStrength = 0.0;
 			density = 0.6f;
 			dynamic = false;
 			break;
