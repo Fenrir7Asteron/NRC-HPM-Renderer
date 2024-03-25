@@ -210,6 +210,7 @@ namespace en
 		primaryRayProb = std::stof(argv[index++]);
 		trainRayLength = std::stoi(argv[index++]);
 		enableBenchmarkOnStart = std::stoi(argv[index++]);
+		enablePauseOnStart = std::stoi(argv[index++]);
 	}
 
 	std::string AppConfig::GetName() const
