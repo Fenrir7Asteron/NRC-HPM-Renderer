@@ -281,7 +281,9 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	}
 
 	bool continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
-	bool pause = false;
+	bool pause = appConfig.enablePauseOnStart;
+	bool pauseAfterNFrames = 0; // if N > 0, then set pause = true after N frames
+
 	while (continueLoop && !shutdown)
 	{
 		// Update
@@ -352,6 +354,15 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 			en::Log::Info("RenderGUI enabled: true");
 		}
 
+		if (!pause && pauseAfterNFrames > 0)
+		{
+			pauseAfterNFrames -= 1;
+			if (pauseAfterNFrames <= 0)
+			{
+				pause = true;
+			}
+		}
+
 		if (en::Window::IsSupported())
 		{
 			if (renderGui)
@@ -377,6 +388,13 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				}
 
 				ImGui::Checkbox("Pause", &pause);
+				
+				bool pauseAfterNFramesWasZero = pauseAfterNFrames == 0;
+				ImGui::Checkbox("Advance one frame", &pauseAfterNFrames);
+				if (pauseAfterNFrames > 0 && pauseAfterNFramesWasZero)
+				{
+					pause = false;
+				}
 
 				if (ImGui::BeginCombo("##combo", currentRendererMenuItem))
 				{
@@ -472,7 +490,9 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 		// Exit
 
 		//
-		frameCount++;
+		if (!pause)
+			frameCount++;
+
 		continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
 	}
 
@@ -522,7 +542,7 @@ int main(int argc, char** argv)
 			"64", "6", "21", "14", "4",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",
-			"1",
+			"1", "0"
 		};
 	}
 

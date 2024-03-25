@@ -57,6 +57,7 @@ namespace en
 		float primaryRayProb = 0.0f;
 		uint32_t trainRayLength = 0;
 		bool enableBenchmarkOnStart = 0;
+		bool enablePauseOnStart = 0;
 
 		AppConfig();
 		AppConfig(const std::vector<char*>& argv);
