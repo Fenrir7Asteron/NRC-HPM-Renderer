@@ -182,7 +182,7 @@ namespace en
 
 	AppConfig::AppConfig(const std::vector<char*>& argv)
 	{
-		if (argv.size() != 20) { Log::Error("Argument count does not match requirements for AppConfig", true); }
+		if (argv.size() != 21) { Log::Error("Argument count does not match requirements for AppConfig", true); }
 
 		size_t index = 1;
 
