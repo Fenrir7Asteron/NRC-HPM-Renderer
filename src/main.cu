@@ -138,16 +138,44 @@ struct BenchmarkStats
 	}
 };
 
-void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, BenchmarkStats& stats, en::LogFile& logFile)
+void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, BenchmarkStats& stats, en::LogFile& logFileNrc, en::LogFile& logFileMc)
 {
 	en::Log::Info("Frame: " + std::to_string(frameCount));
 	en::Reference::Result nrcResult = reference->CompareNrc(*nrcHpmRenderer, camera, queue);
 	en::Reference::Result mcResult = reference->CompareMc(*mcHpmRenderer, camera, queue);
-	logFile.WriteLine(
+	logFileNrc.WriteLine(
 		std::to_string(frameCount) + " " + 
 		std::to_string(nrcResult.mse) + " " +
 		std::to_string(nrcResult.GetRelBias()) + " " +
-		std::to_string(nrcResult.GetCV()));
+		std::to_string(nrcResult.GetCV()) + " " + 
+		std::to_string(nrcHpmRenderer->GetLoss())
+	);
+
+	logFileMc.WriteLine(
+		std::to_string(frameCount) + " " +
+		std::to_string(mcResult.mse) + " " +
+		std::to_string(mcResult.GetRelBias()) + " " +
+		std::to_string(mcResult.GetCV())
+	);
+}
+
+std::string GetCurrentTimestampString()
+{
+	auto t = std::time(nullptr);
+	auto tm = *std::localtime(&t);
+
+	std::ostringstream oss;
+	oss << std::put_time(&tm, "(%d-%m-%Y_%H-%M-%S)");
+	return oss.str();
+}
+
+void CreateOutputDirectory(std::string& outputDirPath)
+{
+	// Create output path if not exists
+	if (!std::filesystem::is_directory(outputDirPath) || !std::filesystem::exists(outputDirPath))
+	{
+		std::filesystem::create_directories(outputDirPath);
+	}
 }
 
 bool RunAppConfigInstance(const en::AppConfig& appConfig)
@@ -238,14 +266,24 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	// Main loop
 	en::Log::Info("Starting main loop");
 	BenchmarkStats stats;
-	en::LogFile logFile("output/ " + appConfig.GetName() + "/log.txt");
+	std::string outputDirPath = "output/" + appConfig.GetName() + GetCurrentTimestampString() + "/";
+	en::LogFile logFileNrc(outputDirPath + "/logNrc.txt");
+	en::LogFile logFileMc(outputDirPath + "/logMc.txt");
 	VkResult result;
 	size_t frameCount = 0;
 	bool shutdown = false;
 	bool restartAfterClose = false;
-	bool benchmark = false;
+
+	bool benchmark = appConfig.enableBenchmarkOnStart;
+	if (benchmark)
+	{
+		CreateOutputDirectory(outputDirPath);
+	}
+
 	bool continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
-	bool pause = false;
+	bool pause = appConfig.enablePauseOnStart;
+	bool pauseAfterNFrames = 0; // if N > 0, then set pause = true after N frames
+
 	while (continueLoop && !shutdown)
 	{
 		// Update
@@ -316,6 +354,15 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 			en::Log::Info("RenderGUI enabled: true");
 		}
 
+		if (!pause && pauseAfterNFrames > 0)
+		{
+			pauseAfterNFrames -= 1;
+			if (pauseAfterNFrames <= 0)
+			{
+				pause = true;
+			}
+		}
+
 		if (en::Window::IsSupported())
 		{
 			if (renderGui)
@@ -332,8 +379,22 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				ImGui::Begin("Controls");
 				shutdown = ImGui::Button("Shutdown");
 				ImGui::Checkbox("Restart after shutdown", &restartAfterClose);
+
+				bool benchmarkPreviousValue = benchmark;
 				ImGui::Checkbox("Benchmark", &benchmark);
+				if (benchmark && !benchmarkPreviousValue) // on enable
+				{
+					CreateOutputDirectory(outputDirPath);
+				}
+
 				ImGui::Checkbox("Pause", &pause);
+				
+				bool pauseAfterNFramesWasZero = pauseAfterNFrames == 0;
+				ImGui::Checkbox("Advance one frame", &pauseAfterNFrames);
+				if (pauseAfterNFrames > 0 && pauseAfterNFramesWasZero)
+				{
+					pause = false;
+				}
 
 				if (ImGui::BeginCombo("##combo", currentRendererMenuItem))
 				{
@@ -417,7 +478,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 		stats.frameIndex = frameCount;
 		stats.frameTimeMS = nrcHpmRenderer->GetFrameTimeMS();
 		stats.loss = nrc.GetLoss();
-		if (benchmark && !hpmScene.IsDynamic() && frameCount % 1 == 0) { Benchmark(&camera, queue, frameCount, stats, logFile); }
+		if (benchmark && !hpmScene.IsDynamic() && frameCount % 1 == 0) { Benchmark(&camera, queue, frameCount, stats, logFileNrc, logFileMc); }
 
 		// Exit if loss is invalid
 		if (std::isnan(nrcLoss) || std::isinf(nrcLoss))
@@ -429,7 +490,9 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 		// Exit
 
 		//
-		frameCount++;
+		if (!pause)
+			frameCount++;
+
 		continueLoop = en::Window::IsSupported() ? !en::Window::IsClosed() : true;
 	}
 
@@ -479,18 +542,12 @@ int main(int argc, char** argv)
 			"64", "6", "21", "14", "4",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",
+			"1", "0"
 		};
 	}
 
 	// Create app config
 	en::AppConfig appConfig(myargv);
-
-	// Create output path if not exists
-	std::string outputDirPath = "output/ " + appConfig.GetName() + "/";
-	if (!std::filesystem::is_directory(outputDirPath) || !std::filesystem::exists(outputDirPath))
-	{
-		std::filesystem::create_directories(outputDirPath);
-	}
 
 	// Run
 	bool restartRunConfig;

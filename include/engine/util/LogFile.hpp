@@ -11,9 +11,11 @@ namespace en
 		LogFile(const std::string& filePath);
 		~LogFile();
 
+		void OpenLogFile();
 		void WriteLine(const std::string& line);
 
 	private:
+		std::string m_FilePath;
 		std::ofstream m_File;
 	};
 }

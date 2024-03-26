@@ -131,7 +131,7 @@ namespace en
 			dirLightStrength = 8.0f;
 			pointLightStrength = 0.0f;
 			hdrEnvMapPath = "";
-			hdrEnvMapStrength = 0.1;
+			hdrEnvMapStrength = 0.0;
 			density = 0.6f;
 			dynamic = false;
 			break;
@@ -153,7 +153,7 @@ namespace en
 
 	AppConfig::AppConfig(const std::vector<char*>& argv)
 	{
-		if (argv.size() != 18) { Log::Error("Argument count does not match requirements for AppConfig", true); }
+		if (argv.size() != 20) { Log::Error("Argument count does not match requirements for AppConfig", true); }
 
 		size_t index = 1;
 
@@ -179,6 +179,8 @@ namespace en
 		primaryRayLength = std::stoi(argv[index++]);
 		primaryRayProb = std::stof(argv[index++]);
 		trainRayLength = std::stoi(argv[index++]);
+		enableBenchmarkOnStart = std::stoi(argv[index++]);
+		enablePauseOnStart = std::stoi(argv[index++]);
 	}
 
 	std::string AppConfig::GetName() const
