@@ -58,6 +58,8 @@ namespace en
 		uint32_t trainRayLength = 0;
 		bool enableBenchmarkOnStart = 0;
 		bool enablePauseOnStart = 0;
+		int startupRenderer = 1;
+		bool excludeNRCRenderer = false;
 
 		AppConfig();
 		AppConfig(const std::vector<char*>& argv);

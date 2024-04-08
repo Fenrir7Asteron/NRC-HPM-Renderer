@@ -216,7 +216,7 @@ namespace en
 		const Camera* camera,
 		const AppConfig& appConfig,
 		const HpmScene& hpmScene,
-		NeuralRadianceCache& nrc)
+		NeuralRadianceCache* nrc)
 		:
 		m_RenderWidth(width),
 		m_RenderHeight(height),
@@ -244,7 +244,7 @@ namespace en
 
 
 		// Calc train subset
-		const uint32_t trainPixelCount = appConfig.trainBatchCount * m_Nrc.GetTrainBatchSize();
+		const uint32_t trainPixelCount = appConfig.trainBatchCount * m_Nrc->GetTrainBatchSize();
 		CalcTrainSubset(trainPixelCount);
 
 		// Calc train ring buffer size
@@ -256,7 +256,7 @@ namespace en
 		CreateSyncObjects(device);
 
 		CreateNrcBuffers();
-		m_Nrc.Init(
+		m_Nrc->Init(
 			m_RenderWidth * m_RenderHeight,
 			reinterpret_cast<float*>(m_NrcInferInputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcInferOutputDCuBuffer),
@@ -334,7 +334,7 @@ namespace en
 		ASSERT_VULKAN(vkResetFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence));
 
 		// Cuda
-		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData), train);
+		m_Nrc->InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData), train);
 
 		// Post cuda
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -560,7 +560,7 @@ namespace en
 
 	float NrcHpmRenderer::GetLoss() const
 	{
-		return m_Nrc.GetLoss();
+		return m_Nrc->GetLoss();
 	}
 
 	void NrcHpmRenderer::SetCamera(VkQueue queue, const Camera* camera)
@@ -614,7 +614,7 @@ namespace en
 		m_BlendIndex = 1;
 	}
 
-	const NeuralRadianceCache& NrcHpmRenderer::GetNrc()
+	const NeuralRadianceCache* NrcHpmRenderer::GetNrc()
 	{
 		return m_Nrc;
 	}
@@ -715,7 +715,7 @@ namespace en
 
 		// Calculate sizes
 		const size_t inferCount = m_RenderWidth * m_RenderHeight;
-		//inferCount += m_Nrc.GetInferBatchSize() - (inferCount % m_Nrc.GetTrainBatchSize());
+		//inferCount += m_Nrc->GetInferBatchSize() - (inferCount % m_Nrc->GetTrainBatchSize());
 		const size_t trainCount = m_TrainWidth * m_TrainHeight;
 
 		m_NrcInferInputBufferSize = inferCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
@@ -834,7 +834,7 @@ namespace en
 
 	void NrcHpmRenderer::CreateNrcInferFilterBuffer()
 	{
-		m_NrcInferFilterBufferSize = sizeof(uint32_t) * m_Nrc.GetInferBatchCount();
+		m_NrcInferFilterBufferSize = sizeof(uint32_t) * m_Nrc->GetInferBatchCount();
 		m_NrcInferFilterData = malloc(m_NrcInferFilterBufferSize);
 		
 		m_NrcInferFilterStagingBuffer = new vk::Buffer(
@@ -936,8 +936,8 @@ namespace en
 		m_SpecData.trainRingBufSize = m_TrainRingBufSize;
 		m_SpecData.trainRayLength = m_TrainRayLength;
 
-		m_SpecData.inferBatchSize = m_Nrc.GetInferBatchSize();
-		m_SpecData.trainBatchSize = m_Nrc.GetTrainBatchSize();
+		m_SpecData.inferBatchSize = m_Nrc->GetInferBatchSize();
+		m_SpecData.trainBatchSize = m_Nrc->GetTrainBatchSize();
 
 		m_SpecData.volumeSizeX = volumeSizeF.x;
 		m_SpecData.volumeSizeY = volumeSizeF.y;
