@@ -42,4 +42,8 @@ layout(set = 5, binding = 2) uniform Renderer
 {
 	vec4 random;
 	float blendFactor;
+	float gHG;
+	float gD;
+	float draineA;
+	float wD;
 };

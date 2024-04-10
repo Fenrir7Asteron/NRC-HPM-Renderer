@@ -33,7 +33,7 @@ vec4 TracePath(const ivec2 imageCoord, const vec3 rayOrigin, const vec3 rayDir, 
 		scatteredLight += sceneLighting; // Phase and transmittance are IS
 
 		// Find new dir by IS the PF
-		currentDir = NewRayDir(currentDir, true);
+		currentDir = NewRayDirApproximateMie(currentDir, true);
 
 		// Terminate probabilisticly
 		if (i >= PRIMARY_RAY_LENGTH)

@@ -92,7 +92,7 @@ vec4 TracePath(const vec3 rayOrigin, const vec3 rayDir)
 		scatteredLight += sceneLighting; // Phase and transmittance are IS
 
 		// Find new dir by IS the PF
-		currentDir = NewRayDir(currentDir, true);
+		currentDir = NewRayDirApproximateMie(currentDir, true);
 	}
 
 	return vec4(scatteredLight, factor);

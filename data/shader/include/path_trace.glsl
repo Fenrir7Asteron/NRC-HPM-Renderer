@@ -223,7 +223,8 @@ vec3 TraceDirLight(const vec3 pos, const vec3 dir)
 	}
 
 	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, find_entry_exit(pos, -normalize(dir_light.dir))[1], VOLUME_DENSITY_FACTOR);
-	const float phase = hg_phase_func(dot(dir_light.dir, -dir));
+	//const float phase = hg_phase_func(dot(dir_light.dir, -dir));
+	const float phase = ApproximateMie(dot(dir_light.dir, -dir));
 	const vec3 dirLighting = vec3(1.0f) * transmittance * dir_light.strength * phase;
 	return dirLighting;
 }
@@ -236,7 +237,8 @@ vec3 TracePointLight(const vec3 pos, const vec3 dir)
 	}
 
 	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pointLight.pos, pos, VOLUME_DENSITY_FACTOR);
-	const float phase = hg_phase_func(dot(normalize(pointLight.pos - pos), -dir));
+	//const float phase = hg_phase_func(dot(normalize(pointLight.pos - pos), -dir));
+	const float phase = ApproximateMie(dot(normalize(pointLight.pos - pos), -dir));
 	const vec3 pointLighting = pointLight.color * pointLight.strength * transmittance * phase;
 	return pointLighting;
 }
@@ -269,8 +271,9 @@ vec3 SampleHdrEnvMap(const vec3 pos, const vec3 dir, uint sampleCount)
 
 	for (uint i = 0; i < sampleCount; i++)
 	{
-		const vec3 randomDir = NewRayDir(dir, false);
-		const float phase = hg_phase_func(dot(randomDir, -dir));
+		const vec3 randomDir = NewRayDirApproximateMie(dir, false);
+		//const float phase = hg_phase_func(dot(randomDir, -dir));
+		const float phase = ApproximateMie(dot(randomDir, -dir));
 		const vec3 exit = find_entry_exit(pos, randomDir)[1];
 		//const float transmittance = GetTransmittance(pos, exit, 16);
 		const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, exit, VOLUME_DENSITY_FACTOR);
@@ -313,7 +316,8 @@ vec3 TraceScene(const vec3 pos, const vec3 dir, const vec3 hdrEnvMapUniformDir)
 {
 	const vec3 exit = find_entry_exit(pos, hdrEnvMapUniformDir)[1];
 	const float hdrEnvMapTransmittance = GetTransmittance(pos, exit, 16);
-	const float hdrEnvMapPhase = hg_phase_func(dot(-dir, hdrEnvMapUniformDir));
+	//const float hdrEnvMapPhase = hg_phase_func(dot(-dir, hdrEnvMapUniformDir));
+	const float hdrEnvMapPhase = ApproximateMie(dot(-dir, hdrEnvMapUniformDir));
 	const vec3 hdrEnvMapLight = SampleHdrEnvMap(hdrEnvMapUniformDir) * hdrEnvMapTransmittance * hdrEnvMapPhase;
 
 	const vec3 totalLight = TraceDirLight(pos, dir) + TracePointLight(pos, dir) + hdrEnvMapLight;

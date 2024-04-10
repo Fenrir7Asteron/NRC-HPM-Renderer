@@ -50,6 +50,10 @@ namespace en
 		{
 			glm::vec4 random;
 			float blendFactor;
+			float gHG;
+			float gD;
+			float draineA;
+			float wD;
 		};
 
 		static VkDescriptorSetLayout s_DescSetLayout;
@@ -61,6 +65,8 @@ namespace en
 
 		bool m_ShouldBlend = false;
 		uint32_t m_BlendIndex = 1;
+
+		float m_cloudParticleSize = 10.0f;
 
 		const Camera* m_Camera;
 		const HpmScene& m_HpmScene;

@@ -108,4 +108,8 @@ layout(set = 5, binding = 11) uniform Renderer
 	vec4 random;
 	uint showNrc;
 	float blendFactor;
+	float gHG;
+	float gD;
+	float draineA;
+	float wD;
 };

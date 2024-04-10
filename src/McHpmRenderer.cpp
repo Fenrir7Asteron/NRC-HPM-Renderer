@@ -128,6 +128,12 @@ namespace en
 
 		// Generate random
 		m_UniformData.random = glm::linearRand(glm::vec4(0.0f), glm::vec4(1.0f));
+
+		// Calc approximate Mie phase function parameters
+		m_UniformData.gHG = exp(-0.0990567 / (m_cloudParticleSize - 1.67154));
+		m_UniformData.gD = exp(-2.20679 / (m_cloudParticleSize + 3.91029) - 0.428934);
+		m_UniformData.draineA = exp(3.62489 - 8.29288 / (m_cloudParticleSize + 5.52825));
+		m_UniformData.wD = exp(-0.599085 / (m_cloudParticleSize - 0.641583) - 0.665888);
 		
 		// Update uniform buffer
 		m_UniformBuffer.SetData(sizeof(UniformData), &m_UniformData, 0, 0);
@@ -256,6 +262,8 @@ namespace en
 		
 		ImGui::Text("Total Time %f ms", m_TimePeriod);
 		ImGui::Text("Theoretical FPS %f", 1000.0f / m_TimePeriod);
+
+		ImGui::DragFloat("Particle size (microns)", &m_cloudParticleSize, 0.1f, 0.0f, 50.0f);
 
 		ImGui::Checkbox("Blend", &m_ShouldBlend);
 		ImGui::Text("Blend index %u", m_BlendIndex);
