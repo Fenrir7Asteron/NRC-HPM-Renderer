@@ -700,6 +700,7 @@ namespace en
 		implVulkanInitInfo.ImageCount = imageCount;
 		implVulkanInitInfo.Allocator = nullptr;
 		implVulkanInitInfo.CheckVkResultFn = CheckVkResult;
+		implVulkanInitInfo.RenderPass = m_RenderPass;
 		if (!ImGui_ImplVulkan_Init(&implVulkanInitInfo))
 			Log::Error("Failed to Init ImGuiManager", true);
 
