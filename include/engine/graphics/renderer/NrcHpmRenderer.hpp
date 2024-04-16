@@ -58,8 +58,10 @@ namespace en
 			uint32_t trainRingBufSize;
 			uint32_t trainRayLength;
 
-			uint32_t inferBatchSize;
-			uint32_t trainBatchSize;
+			uint32_t inferBatchSizeVertical;
+			uint32_t inferBatchSizeHorizontal;
+			uint32_t trainBatchSizeVertical;
+			uint32_t trainBatchSizeHorizontal;
 
 			float volumeSizeX;
 			float volumeSizeY;
@@ -142,6 +144,14 @@ namespace en
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
 
+		/*VkDeviceSize m_NrcInferBatchMappingBufferSize;
+		void* m_NrcInferBatchMappingData;
+		vk::Buffer* m_NrcInferBatchMappingBuffer = nullptr;
+
+		VkDeviceSize m_NrcTrainBatchMappingBufferSize;
+		void* m_NrcTrainBatchMappingData;
+		vk::Buffer* m_NrcTrainBatchMappingBuffer = nullptr;*/
+
 		VkPipelineLayout m_PipelineLayout;
 
 		SpecializationData m_SpecData;
@@ -199,7 +209,7 @@ namespace en
 		VkCommandBuffer m_PostCudaCommandBuffer;
 		VkCommandBuffer m_RandomTasksCmdBuf;
 
-		void CalcTrainSubset(uint32_t trainPixelCount);
+		void CalcTrainSubset();
 
 		void CreateSyncObjects(VkDevice device);
 

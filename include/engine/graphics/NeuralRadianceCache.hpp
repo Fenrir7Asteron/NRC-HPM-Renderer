@@ -10,10 +10,11 @@ namespace en
 	class NeuralRadianceCache
 	{
 	public:
-		NeuralRadianceCache(const AppConfig& appConfig);
+		NeuralRadianceCache(const AppConfig& appConfig, const uint32_t renderWidth, const uint32_t renderHeight);
 
 		void Init(
-			uint32_t inferCount,
+			float renderWidth, 
+			float renderHeight,
 			float* dCuInferInput, 
 			float* dCuInferOutput, 
 			float* dCuTrainInput, 
@@ -28,8 +29,12 @@ namespace en
 		float GetLoss() const;
 		size_t GetInferBatchCount() const;
 		size_t GetTrainBatchCount() const;
-		uint32_t GetInferBatchSize() const;
-		uint32_t GetTrainBatchSize() const;
+		size_t GetTrainBatchCountHorizontal() const;
+		size_t GetTrainBatchCountVertical() const;
+		uint32_t GetInferBatchSizeVertical() const;
+		uint32_t GetInferBatchSizeHorizontal() const;
+		uint32_t GetTrainBatchSizeVertical() const;
+		uint32_t GetTrainBatchSizeHorizontal() const;
 
 		static uint32_t sc_InputCount;
 		static uint32_t sc_OutputCount;
@@ -37,9 +42,16 @@ namespace en
 	private:
 		static const uint32_t sc_FilterFrameCountThreshold = 1;
 
-		const uint32_t m_InferBatchSize = 0;
-		const uint32_t m_TrainBatchSize = 0;
-		const uint32_t m_TrainBatchCount = 0;
+		uint32_t m_InferBatchSize = 0;
+		uint32_t m_TrainBatchSize = 0;
+		uint32_t m_InferBatchSizeVertical = 0;
+		uint32_t m_InferBatchSizeHorizontal = 0;
+		uint32_t m_TrainBatchSizeVertical = 0;
+		uint32_t m_TrainBatchSizeHorizontal = 0;
+		uint32_t m_InferBatchCountVertical = 0;
+		uint32_t m_InferBatchCountHorizontal = 0;
+		const uint32_t m_TrainBatchCountVertical = 0;
+		const uint32_t m_TrainBatchCountHorizontal = 0;
 
 		tcnn::TrainableModel m_Model;
 
@@ -63,5 +75,7 @@ namespace en
 		void Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter);
 		void AwaitCudaStartSemaphore();
 		void SignalCudaFinishedSemaphore();
+		size_t GetLinearInferBatchIndex(size_t verticalIdx, size_t horizontalIdx);
+		size_t GetLinearTrainBatchIndex(size_t verticalIdx, size_t horizontalIdx);
 	};
 }

@@ -252,8 +252,7 @@ namespace en
 
 
 		// Calc train subset
-		const uint32_t trainPixelCount = appConfig.trainBatchCount * m_Nrc.GetTrainBatchSize();
-		CalcTrainSubset(trainPixelCount);
+		CalcTrainSubset();
 
 		// Calc train ring buffer size
 		m_TrainRingBufSize = static_cast<uint32_t>(appConfig.trainRingBufSize * static_cast<float>(m_TrainWidth * m_TrainHeight));
@@ -265,7 +264,7 @@ namespace en
 
 		CreateNrcBuffers();
 		m_Nrc.Init(
-			m_RenderWidth * m_RenderHeight,
+			m_RenderWidth, m_RenderHeight,
 			reinterpret_cast<float*>(m_NrcInferInputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcInferOutputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcTrainInputDCuBuffer),
@@ -443,6 +442,14 @@ namespace en
 		m_NrcInferInputBuffer->Destroy();
 		delete m_NrcInferInputBuffer;
 		ASSERT_CUDA(cudaDestroyExternalMemory(m_NrcInferInputCuExtMem));
+
+		/*m_NrcInferBatchMappingBuffer->Destroy();
+		delete m_NrcInferBatchMappingBuffer;
+		delete m_NrcInferBatchMappingData;
+
+		m_NrcTrainBatchMappingBuffer->Destroy();
+		delete m_NrcTrainBatchMappingBuffer;
+		delete m_NrcTrainBatchMappingData;*/
 
 		vkDestroyFence(device, m_PostCudaFence, nullptr);
 		vkDestroyFence(device, m_PreCudaFence, nullptr);
@@ -640,38 +647,18 @@ namespace en
 		return m_Nrc;
 	}
 
-	void NrcHpmRenderer::CalcTrainSubset(uint32_t trainPixelCount)
+	void NrcHpmRenderer::CalcTrainSubset()
 	{
-		const uint32_t sqrt = std::sqrt(trainPixelCount);
-		for (uint32_t factor = sqrt; factor >= 2; factor--)
-		{
-			if (trainPixelCount % factor == 0)
-			{
-				const uint32_t otherFactor = trainPixelCount / factor;
-				const uint32_t biggerFactor = std::max(factor, otherFactor);
-				const uint32_t smallerFactor = std::min(factor, otherFactor);
-				
-				if (m_RenderWidth > m_RenderHeight)
-				{
-					m_TrainWidth = biggerFactor;
-					m_TrainHeight = smallerFactor;
-				}
-				else
-				{
-					m_TrainWidth = smallerFactor;
-					m_TrainHeight = biggerFactor;
-				}
+		m_TrainWidth = m_Nrc.GetTrainBatchCountHorizontal() * m_Nrc.GetTrainBatchSizeHorizontal();
+		m_TrainHeight = m_Nrc.GetTrainBatchCountVertical() * m_Nrc.GetTrainBatchSizeVertical();
 
-				m_TrainXDist = m_RenderWidth / m_TrainWidth;
-				m_TrainYDist = m_RenderHeight / m_TrainHeight;
+		m_TrainXDist = m_RenderWidth / m_TrainWidth;
+		m_TrainYDist = m_RenderHeight / m_TrainHeight;
 
-				en::Log::Warn("Train pixel count: " + std::to_string(trainPixelCount) + ", m_TrainXDist: " + std::to_string(m_TrainXDist) + ", m_TrainYDist: " + std::to_string(m_TrainYDist));
-
-				return;
-			}
-		}
-
-		en::Log::Error("Could not find suitable division of trainPixelCount", true);
+		en::Log::Warn( "m_TrainWidth: " + std::to_string(m_TrainWidth) 
+			+ ", m_TrainHeight: " + std::to_string(m_TrainHeight)
+			+ ", m_TrainXDist: " + std::to_string(m_TrainXDist) 
+			+ ", m_TrainYDist : " + std::to_string(m_TrainYDist));
 	}
 
 	void NrcHpmRenderer::CreateSyncObjects(VkDevice device)
@@ -740,7 +727,7 @@ namespace en
 		const size_t trainCount = m_TrainWidth * m_TrainHeight;
 
 		m_NrcInferInputBufferSize = inferCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
-		m_NrcInferOutputBufferSize = inferCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
+		m_NrcInferOutputBufferSize = inferCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);		
 		m_NrcTrainInputBufferSize = trainCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
 		m_NrcTrainTargetBufferSize = trainCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
 
@@ -981,8 +968,10 @@ namespace en
 		m_SpecData.trainRingBufSize = m_TrainRingBufSize;
 		m_SpecData.trainRayLength = m_TrainRayLength;
 
-		m_SpecData.inferBatchSize = m_Nrc.GetInferBatchSize();
-		m_SpecData.trainBatchSize = m_Nrc.GetTrainBatchSize();
+		m_SpecData.inferBatchSizeVertical = m_Nrc.GetInferBatchSizeVertical();
+		m_SpecData.inferBatchSizeHorizontal = m_Nrc.GetInferBatchSizeHorizontal();
+		m_SpecData.trainBatchSizeVertical = m_Nrc.GetTrainBatchSizeVertical();
+		m_SpecData.trainBatchSizeHorizontal = m_Nrc.GetTrainBatchSizeHorizontal();
 
 		m_SpecData.volumeSizeX = volumeSizeF.x;
 		m_SpecData.volumeSizeY = volumeSizeF.y;
@@ -1050,15 +1039,25 @@ namespace en
 		trainRayLengthEntry.offset = offsetof(SpecializationData, SpecializationData::trainRayLength);
 		trainRayLengthEntry.size = sizeof(uint32_t);
 
-		VkSpecializationMapEntry inferBatchSizeEntry{};
-		inferBatchSizeEntry.constantID = constantID++;
-		inferBatchSizeEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSize);
-		inferBatchSizeEntry.size = sizeof(uint32_t);
+		VkSpecializationMapEntry inferBatchSizeVerticalEntry{};
+		inferBatchSizeVerticalEntry.constantID = constantID++;
+		inferBatchSizeVerticalEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSizeVertical);
+		inferBatchSizeVerticalEntry.size = sizeof(uint32_t);
 
-		VkSpecializationMapEntry trainBatchSizeEntry;
-		trainBatchSizeEntry.constantID = constantID++;
-		trainBatchSizeEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSize);
-		trainBatchSizeEntry.size = sizeof(uint32_t);
+		VkSpecializationMapEntry inferBatchSizeHorizontalEntry{};
+		inferBatchSizeHorizontalEntry.constantID = constantID++;
+		inferBatchSizeHorizontalEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSizeHorizontal);
+		inferBatchSizeHorizontalEntry.size = sizeof(uint32_t);
+
+		VkSpecializationMapEntry trainBatchSizeVerticalEntry;
+		trainBatchSizeVerticalEntry.constantID = constantID++;
+		trainBatchSizeVerticalEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSizeVertical);
+		trainBatchSizeVerticalEntry.size = sizeof(uint32_t);
+
+		VkSpecializationMapEntry trainBatchSizeHorizontalEntry;
+		trainBatchSizeHorizontalEntry.constantID = constantID++;
+		trainBatchSizeHorizontalEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSizeHorizontal);
+		trainBatchSizeHorizontalEntry.size = sizeof(uint32_t);
 
 		VkSpecializationMapEntry volumeSizeXEntry;
 		volumeSizeXEntry.constantID = constantID++;
@@ -1101,8 +1100,10 @@ namespace en
 			primaryRayLengthEntry,
 			primaryRayProbEntry,
 			trainRingBufSizeEntry,
-			inferBatchSizeEntry,
-			trainBatchSizeEntry,
+			inferBatchSizeVerticalEntry,
+			inferBatchSizeHorizontalEntry,
+			trainBatchSizeVerticalEntry,
+			trainBatchSizeHorizontalEntry,
 			volumeSizeXEntry,
 			volumeSizeYEntry,
 			volumeSizeZEntry,

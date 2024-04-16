@@ -96,11 +96,13 @@ vec4 TracePath(const vec3 rayOrigin, const vec3 rayDir)
 void main()
 {
 	// Get image coord
-	const uint x = gl_GlobalInvocationID.x;
-	const uint y = gl_GlobalInvocationID.y;
+	uint x = gl_GlobalInvocationID.x;
+	uint y = gl_GlobalInvocationID.y;
 	const ivec2 trainImageCoord = ivec2(x, y);
 	const ivec2 renderImageCoord = trainImageCoord * ivec2(TRAIN_X_DIST, TRAIN_Y_DIST);
 	const vec2 fragUV = vec2(float(x) * ONE_OVER_RENDER_WIDTH, float(y) * ONE_OVER_RENDER_HEIGHT);
+
+	//y = TRAIN_HEIGHT - y;
 
 	// Setup random
 	InitRandom(fragUV);
@@ -126,7 +128,14 @@ void main()
 	target /= float(TRAIN_SPP);
 
 	// Calc index
-	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+	//const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+
+	const uint trainBatchCountHorizontal = uint(ceil(float(TRAIN_WIDTH) / TRAIN_BATCH_SIZE_HORIZONTAL));
+	const uint trainBatchSizeTotal = TRAIN_BATCH_SIZE_HORIZONTAL * TRAIN_BATCH_SIZE_VERTICAL;
+	const uint linearPixelIndex = (y / TRAIN_BATCH_SIZE_VERTICAL) * trainBatchSizeTotal * trainBatchCountHorizontal +
+							(x / TRAIN_BATCH_SIZE_HORIZONTAL) * trainBatchSizeTotal +
+							(y % TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_BATCH_SIZE_HORIZONTAL +
+							x % TRAIN_BATCH_SIZE_HORIZONTAL;
 
 	// Store train data
 	if (TRAIN_RING_BUF_SIZE > 0)
@@ -137,7 +146,8 @@ void main()
 	// Increment batch valid sample counter
 	if (didScatter)
 	{
-		const uint linearBatchIndex = linearPixelIndex / TRAIN_BATCH_SIZE;
+		const uint linearBatchIndex = y / TRAIN_BATCH_SIZE_VERTICAL * trainBatchCountHorizontal 
+									+ x / TRAIN_BATCH_SIZE_HORIZONTAL;
 		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
 	}
 }
