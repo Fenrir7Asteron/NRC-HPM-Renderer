@@ -345,7 +345,6 @@ namespace en
 		// Cuda
 		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData),
 			reinterpret_cast<uint32_t*>(m_NrcTrainFilterData),
-			m_NrcTrainFilteredFrameCounter,
 			train);
 
 		// Post cuda
@@ -425,7 +424,6 @@ namespace en
 		m_NrcTrainFilterStagingBuffer->Destroy();
 		delete m_NrcTrainFilterStagingBuffer;
 		delete m_NrcTrainFilterData;
-		delete m_NrcTrainFilteredFrameCounter;
 
 		m_NrcTrainTargetBuffer->Destroy();
 		delete m_NrcTrainTargetBuffer;
@@ -652,8 +650,8 @@ namespace en
 		m_TrainWidth = m_Nrc.GetTrainBatchCountHorizontal() * m_Nrc.GetTrainBatchSizeHorizontal();
 		m_TrainHeight = m_Nrc.GetTrainBatchCountVertical() * m_Nrc.GetTrainBatchSizeVertical();
 
-		m_TrainXDist = m_RenderWidth / m_TrainWidth;
-		m_TrainYDist = m_RenderHeight / m_TrainHeight;
+		m_TrainXDist = ((float)m_RenderWidth) / m_TrainWidth;
+		m_TrainYDist = ((float)m_RenderHeight) / m_TrainHeight;
 
 		en::Log::Warn( "m_TrainWidth: " + std::to_string(m_TrainWidth) 
 			+ ", m_TrainHeight: " + std::to_string(m_TrainHeight)
@@ -863,11 +861,6 @@ namespace en
 		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
 		m_NrcTrainFilterBufferSize = sizeof(uint32_t) * trainBatchCount;
 		m_NrcTrainFilterData = malloc(m_NrcTrainFilterBufferSize);
-		m_NrcTrainFilteredFrameCounter = reinterpret_cast<uint32_t*>(malloc(m_NrcTrainFilterBufferSize));
-		for (int i = 0; i < trainBatchCount; ++i)
-		{
-			m_NrcTrainFilteredFrameCounter[i] = 0;
-		}
 
 		m_NrcTrainFilterStagingBuffer = new vk::Buffer(
 			m_NrcTrainFilterBufferSize,
@@ -1007,12 +1000,12 @@ namespace en
 		VkSpecializationMapEntry trainXDistEntry{};
 		trainXDistEntry.constantID = constantID++;
 		trainXDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainXDist);
-		trainXDistEntry.size = sizeof(uint32_t);
+		trainXDistEntry.size = sizeof(float);
 
 		VkSpecializationMapEntry trainYDistEntry{};
 		trainYDistEntry.constantID = constantID++;
-		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainXDist);
-		trainYDistEntry.size = sizeof(uint32_t);
+		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainYDist);
+		trainYDistEntry.size = sizeof(float);
 
 		VkSpecializationMapEntry trainSppEntry;
 		trainSppEntry.constantID = constantID++;

@@ -45,8 +45,7 @@ namespace en
 		uint32_t nnDepth = 0;
 		uint32_t log2InferBatchSize = 0;
 		uint32_t log2TrainBatchSize = 0;
-		uint32_t trainBatchHorizontalCount = 0;
-		uint32_t trainBatchVerticalCount = 0;
+		uint32_t maxTrainBatchLevel = 0;
 
 		// scene
 		HpmSceneConfig scene;

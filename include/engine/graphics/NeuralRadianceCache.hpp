@@ -22,7 +22,7 @@ namespace en
 			cudaExternalSemaphore_t cudaStartSemaphore,
 			cudaExternalSemaphore_t cudaFinishedSemaphore);
 
-		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train);
+		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train);
 
 		void Destroy();
 
@@ -52,6 +52,7 @@ namespace en
 		uint32_t m_InferBatchCountHorizontal = 0;
 		const uint32_t m_TrainBatchCountVertical = 0;
 		const uint32_t m_TrainBatchCountHorizontal = 0;
+		const uint32_t m_TrainMaxBatchLevel = 0;
 
 		tcnn::TrainableModel m_Model;
 
@@ -62,8 +63,8 @@ namespace en
 
 		std::vector<tcnn::GPUMatrix<float>> m_InferInputBatches;
 		std::vector<tcnn::GPUMatrix<float>> m_InferOutputBatches;
-		std::vector<tcnn::GPUMatrix<float>> m_TrainInputBatches;
-		std::vector<tcnn::GPUMatrix<float>> m_TrainTargetBatches;
+		std::vector<std::vector<tcnn::GPUMatrix<float>>> m_TrainInputBatches;
+		std::vector<std::vector<tcnn::GPUMatrix<float>>> m_TrainTargetBatches;
 
 		cudaExternalSemaphore_t m_CudaStartSemaphore;
 		cudaExternalSemaphore_t m_CudaFinishedSemaphore;
@@ -72,7 +73,9 @@ namespace en
 		size_t m_TrainCounter = 0;
 
 		void Inference(const uint32_t* inferFilter);
-		void Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter);
+		void Train(const uint32_t* trainFilter);
+		bool GetBatchesToTrain(const int32_t currentBatchLevel, const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter, std::vector<std::pair<uint32_t, uint32_t>>& batchesToTrain);
+		bool IsBatchFilterPositive(const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter);
 		void AwaitCudaStartSemaphore();
 		void SignalCudaFinishedSemaphore();
 		size_t GetLinearInferBatchIndex(size_t verticalIdx, size_t horizontalIdx);

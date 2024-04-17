@@ -30,7 +30,7 @@ void main()
 	const ivec2 imageCoord = ivec2(x, y);
 
 	// Map 2D image coordinates to 1D infer buffer coordinate
-	const uint linearPixelIndex = GetLinearPixelIndex(x, y, RENDER_WIDTH, RENDER_HEIGHT, INFER_BATCH_SIZE_HORIZONTAL, INFER_BATCH_SIZE_VERTICAL);
+	const uint linearPixelIndex = GetInferLinearPixelIndex(x, y, RENDER_WIDTH, RENDER_HEIGHT, INFER_BATCH_SIZE_HORIZONTAL, INFER_BATCH_SIZE_VERTICAL);
 
 //	vec4 primaryRayColor = imageLoad(primaryRayColorImage, imageCoord);
 //	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(RENDER_HEIGHT * RENDER_WIDTH));

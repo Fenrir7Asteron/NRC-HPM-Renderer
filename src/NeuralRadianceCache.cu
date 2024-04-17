@@ -9,8 +9,9 @@ namespace en
 	uint32_t NeuralRadianceCache::sc_OutputCount = 3;
 
 	NeuralRadianceCache::NeuralRadianceCache(const AppConfig& appConfig, const uint32_t renderWidth, const uint32_t renderHeight) :
-		m_TrainBatchCountVertical(appConfig.trainBatchVerticalCount),
-		m_TrainBatchCountHorizontal(appConfig.trainBatchHorizontalCount),
+		m_TrainBatchCountVertical(1 << (appConfig.maxTrainBatchLevel)),
+		m_TrainBatchCountHorizontal(1 << (appConfig.maxTrainBatchLevel)),
+		m_TrainMaxBatchLevel(appConfig.maxTrainBatchLevel),
 		m_InferBatchSize(2 << (appConfig.log2InferBatchSize - 1)),
 		m_TrainBatchSize(2 << (appConfig.log2TrainBatchSize - 1)),
 		m_InferBatchSizeVertical(sqrt(2 << (appConfig.log2InferBatchSize - 1))),
@@ -117,15 +118,24 @@ namespace en
 		}
 
 		// Init train buffers
-		const uint32_t trainBatchCount = m_TrainBatchCountVertical * m_TrainBatchCountHorizontal;
 		if (m_TrainBatchSize % tcnn::BATCH_SIZE_GRANULARITY != 0) { en::Log::Error("NRC requires trainBatchSize to be a multiple of " + std::to_string(tcnn::BATCH_SIZE_GRANULARITY), true); }
-		m_TrainInputBatches.resize(trainBatchCount);
-		m_TrainTargetBatches.resize(trainBatchCount);
+		m_TrainInputBatches.resize(m_TrainMaxBatchLevel + 1);
+		m_TrainTargetBatches.resize(m_TrainMaxBatchLevel + 1);
 
-		for (uint32_t i = 0; i < trainBatchCount; i++)
+		for (uint32_t i = 0; i <= m_TrainMaxBatchLevel; i++)
 		{
-			m_TrainInputBatches[i] = m_TrainInput.slice_cols(i * m_TrainBatchSize, m_TrainBatchSize);
-			m_TrainTargetBatches[i] = m_TrainTarget.slice_cols(i * m_TrainBatchSize, m_TrainBatchSize);
+			const uint32_t levelSize = 1 << (i * 2);
+			const uint32_t trainBatchCount = m_TrainBatchCountVertical * m_TrainBatchCountHorizontal / levelSize;
+			const uint32_t batchSize = m_TrainBatchSize * levelSize;
+
+			m_TrainInputBatches[i].resize(trainBatchCount);
+			m_TrainTargetBatches[i].resize(trainBatchCount);
+
+			for (uint32_t j = 0; j < trainBatchCount; j++)
+			{
+				m_TrainInputBatches[i][j] = m_TrainInput.slice_cols(j * batchSize, batchSize);
+				m_TrainTargetBatches[i][j] = m_TrainTarget.slice_cols(j * batchSize, batchSize);
+			}
 		}
 
 		en::Log::Info("Infer batch offset" + std::to_string(batchOffset) + ", infer count" + std::to_string(inferCount));
@@ -135,11 +145,11 @@ namespace en
 		en::Log::Info("Train batch size (V:" + std::to_string(m_TrainBatchSizeVertical) + ", H:" + std::to_string(m_TrainBatchSizeHorizontal) + ")");
 	}
 
-	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train)
+	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train)
 	{
 		AwaitCudaStartSemaphore();
 		Inference(inferFilter);
-		if (train) { Train(trainFilter, trainFilteredFrameCounter); }
+		if (train) { Train(trainFilter); }
 		SignalCudaFinishedSemaphore();
 	}
 
@@ -210,35 +220,92 @@ namespace en
 		}
 	}
 
-	void NeuralRadianceCache::Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter)
+	void NeuralRadianceCache::Train(const uint32_t* trainFilter)
 	{
-		for (size_t i = 0; i < m_TrainBatchCountVertical; i++)
+		std::vector<std::pair<uint32_t, uint32_t>> batchesToTrain;
+		GetBatchesToTrain(m_TrainMaxBatchLevel, 0, 1 << (m_TrainMaxBatchLevel * 2), trainFilter, batchesToTrain);
+
+		for (size_t i = 0; i < batchesToTrain.size(); i++)
 		{
-			for (size_t j = 0; j < m_TrainBatchCountHorizontal; j++)
+			const uint32_t batchLevel = batchesToTrain[i].first;
+			const uint32_t batchIdx = batchesToTrain[i].second;
+
+			const tcnn::GPUMatrix<float>& inputBatch = m_TrainInputBatches[batchLevel][batchIdx];
+			const tcnn::GPUMatrix<float>& targetBatch = m_TrainTargetBatches[batchLevel][batchIdx];
+			auto forwardContext = m_Model.trainer->training_step(inputBatch, targetBatch);
+			m_Loss = m_Model.trainer->loss(*forwardContext.get());
+		}
+	}
+
+	bool NeuralRadianceCache::GetBatchesToTrain(const int32_t currentBatchLevel, const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter, std::vector<std::pair<uint32_t, uint32_t>>& batchesToTrain)
+	{
+		if (currentBatchLevel < 0)
+			return true;
+
+		bool isFilterPositive = IsBatchFilterPositive(minBatchIdx, maxBatchIdx, trainFilter);
+		if (!isFilterPositive)
+		{
+			return false;
+		}
+
+		const uint32_t size = (maxBatchIdx - minBatchIdx) / 4;
+		
+		bool p1 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx, minBatchIdx + size, trainFilter, batchesToTrain);
+		bool p2 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx + size, minBatchIdx + size * 2, trainFilter, batchesToTrain);
+		bool p3 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx + size * 2, minBatchIdx + size * 3, trainFilter, batchesToTrain);
+		bool p4 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx + size * 3, minBatchIdx + size * 4, trainFilter, batchesToTrain);
+		bool isAllChildPositive = p1 && p2 && p3 && p4;
+		if (isAllChildPositive)
+		{
+			// If all subbatches are positive we can join them all in a single root batch
+			if (currentBatchLevel == m_TrainMaxBatchLevel)
 			{
-				const size_t linearBatchIndex = GetLinearTrainBatchIndex(i, j);
-				//en::Log::Info("Linear train batch index " + std::to_string(linearBatchIndex) + " has filter " + std::to_string(trainFilter[linearBatchIndex]));
+				batchesToTrain.push_back({ m_TrainMaxBatchLevel, 0 });
+			}
+			
+			return true;
+		}
 
-				if (trainFilter[linearBatchIndex] <= 0)
-				{
-					trainFilteredFrameCounter[linearBatchIndex] = std::min(trainFilteredFrameCounter[linearBatchIndex] + 1, sc_FilterFrameCountThreshold);
-				}
-				else
-				{
-					trainFilteredFrameCounter[linearBatchIndex] = 0;
-				}
+		const uint32_t childBatchLevel = currentBatchLevel - 1;
+		const uint32_t childLevelSize = 1 << ((m_TrainMaxBatchLevel - childBatchLevel) * 2);
+		if (p1)
+		{
+			const uint32_t currentBatchIdx = (minBatchIdx)/ childLevelSize;
+			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
+		}
 
-				// Exclude batch from training if it filtered more than sc_FilterFrameCountThreshold times
-				// Batch is filtered if not a single ray scattered inside it
-				if (trainFilteredFrameCounter[linearBatchIndex] < sc_FilterFrameCountThreshold)
-				{
-					const tcnn::GPUMatrix<float>& inputBatch = m_TrainInputBatches[linearBatchIndex];
-					const tcnn::GPUMatrix<float>& targetBatch = m_TrainTargetBatches[linearBatchIndex];
-					auto forwardContext = m_Model.trainer->training_step(inputBatch, targetBatch);
-					m_Loss = m_Model.trainer->loss(*forwardContext.get());
-				}
+		if (p2)
+		{
+			const uint32_t currentBatchIdx = (minBatchIdx + size) / childLevelSize;
+			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
+		}
+
+		if (p3)
+		{
+			const uint32_t currentBatchIdx = (minBatchIdx + size * 2) / childLevelSize;
+			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
+		}
+
+		if (p4)
+		{
+			const uint32_t currentBatchIdx = (minBatchIdx + size * 3) / childLevelSize;
+			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
+		}
+
+		return false;
+	}
+
+	bool NeuralRadianceCache::IsBatchFilterPositive(const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter)
+	{
+		for (int i = minBatchIdx; i < maxBatchIdx; ++i)
+		{
+			if (trainFilter[i] > 0)
+			{
+				return true;
 			}
 		}
+
+		return false;
 	}
 
 	void NeuralRadianceCache::AwaitCudaStartSemaphore()

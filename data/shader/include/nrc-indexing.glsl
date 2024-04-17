@@ -1,4 +1,4 @@
-uint GetLinearPixelIndex(const uint x, const uint y, const uint renderWidth, const uint renderHeight,
+uint GetInferLinearPixelIndex(const uint x, const uint y, const uint renderWidth, const uint renderHeight,
 	const uint batchSizeHorizontal, const uint batchSizeVertical)
 {
 	const uint inferBatchCountVertical = uint(ceil(float(renderHeight) / batchSizeVertical));
@@ -26,5 +26,18 @@ uint GetLinearPixelIndex(const uint x, const uint y, const uint renderWidth, con
 		+ batchOffsetY * batchSizeHorizontal * isNotLastBatchHorizontal
 		+ batchOffsetY * lastBatchSizeHorizontal * isLastBatchHorizontal
 		+ batchOffsetX
+		;
+}
+
+uint GetTrainLinearPixelIndex(const uint x, const uint y, const uint renderWidth, const uint renderHeight,
+	const uint batchSizeHorizontal, const uint batchSizeVertical)
+{
+	const uint batchCountHorizontal = renderWidth / batchSizeHorizontal;
+	const uint batchSizeTotal = batchSizeHorizontal * batchSizeVertical;
+
+	return (y / batchSizeVertical) * batchSizeTotal * batchCountHorizontal +
+		(x / batchSizeHorizontal) * batchSizeTotal +
+		(y % batchSizeVertical) * batchSizeHorizontal +
+		x % batchSizeHorizontal
 		;
 }

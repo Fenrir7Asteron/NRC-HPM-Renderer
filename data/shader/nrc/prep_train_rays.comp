@@ -99,7 +99,7 @@ void main()
 	uint x = gl_GlobalInvocationID.x;
 	uint y = gl_GlobalInvocationID.y;
 	const ivec2 trainImageCoord = ivec2(x, y);
-	const ivec2 renderImageCoord = trainImageCoord * ivec2(TRAIN_X_DIST, TRAIN_Y_DIST);
+	const ivec2 renderImageCoord = ivec2(float(trainImageCoord.x) * TRAIN_X_DIST, float(trainImageCoord.y) * TRAIN_Y_DIST);
 	const vec2 fragUV = vec2(float(x) * ONE_OVER_RENDER_WIDTH, float(y) * ONE_OVER_RENDER_HEIGHT);
 
 	//y = TRAIN_HEIGHT - y;
@@ -130,12 +130,17 @@ void main()
 	// Calc index
 	//const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
 
-	const uint trainBatchCountHorizontal = uint(ceil(float(TRAIN_WIDTH) / TRAIN_BATCH_SIZE_HORIZONTAL));
-	const uint trainBatchSizeTotal = TRAIN_BATCH_SIZE_HORIZONTAL * TRAIN_BATCH_SIZE_VERTICAL;
-	const uint linearPixelIndex = (y / TRAIN_BATCH_SIZE_VERTICAL) * trainBatchSizeTotal * trainBatchCountHorizontal +
-							(x / TRAIN_BATCH_SIZE_HORIZONTAL) * trainBatchSizeTotal +
-							(y % TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_BATCH_SIZE_HORIZONTAL +
-							x % TRAIN_BATCH_SIZE_HORIZONTAL;
+	const uint linearPixelIndex = GetTrainLinearPixelIndex(x, y, TRAIN_WIDTH, TRAIN_HEIGHT, TRAIN_BATCH_SIZE_HORIZONTAL, TRAIN_BATCH_SIZE_VERTICAL);
+	const uint linearPixelIndexScaledToRender = GetTrainLinearPixelIndex(renderImageCoord.x, renderImageCoord.y, RENDER_WIDTH, RENDER_HEIGHT,
+		uint(float(TRAIN_BATCH_SIZE_HORIZONTAL) * TRAIN_X_DIST), uint(float(TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_Y_DIST));
+
+	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
+	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+
+//	vec4 primaryRayColor = imageLoad(primaryRayColorImage, trainImageCoord);
+//	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(TRAIN_WIDTH * TRAIN_HEIGHT));
+//	imageStore(primaryRayColorImage, trainImageCoord, primaryRayColor);
 
 	// Store train data
 	if (TRAIN_RING_BUF_SIZE > 0)
@@ -146,6 +151,7 @@ void main()
 	// Increment batch valid sample counter
 	if (didScatter)
 	{
+		const uint trainBatchCountHorizontal = TRAIN_WIDTH / TRAIN_BATCH_SIZE_HORIZONTAL;
 		const uint linearBatchIndex = y / TRAIN_BATCH_SIZE_VERTICAL * trainBatchCountHorizontal 
 									+ x / TRAIN_BATCH_SIZE_HORIZONTAL;
 		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
