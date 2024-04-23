@@ -1,4 +1,4 @@
-const int MAX_UNBIASED_POWER_ESTIMATE_COUNT = 8;
+const int MAX_UNBIASED_POWER_ESTIMATE_COUNT = 16;
 
 float GetTransmittance(const vec3 start, const vec3 end, const uint count)
 {
@@ -159,7 +159,7 @@ float UnbiasedRaymarchingTransmittanceEstimator(const vec3 start, const vec3 end
 		}
 
 		X[i] = -sampleLength * X[i];
-		//X[i] = X[i] - sampleLength * (0.5 - u) * (d2 - d1); // endpoint matching, optional
+		X[i] = X[i] - sampleLength * (0.5 - u) * (d2 - d1); // endpoint matching, optional
 	}
 
 	float T = 0;
@@ -207,11 +207,11 @@ float BiasedRaymarchingTransmittanceEstimator(const vec3 start, const vec3 end, 
 
 	for (uint i = 0; i < M; i++)
 	{
-		X += getDensity(start + dir * (sampleLength * (u + i)));
+		X += getDensity(start + dir * (sampleLength * (u + float(i))));
 	}
 
 	X = -sampleLength * X;
-	//X = X - sampleLength * (0.5 - u) * (d2 - d1); // endpoint matching, optional
+	X = X - sampleLength * (0.5 - u) * (d2 - d1); // endpoint matching, optional
 	return exp(X);
 }
 
@@ -222,7 +222,7 @@ vec3 TraceDirLight(const vec3 pos, const vec3 dir)
 		return vec3(0.0);
 	}
 
-	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, find_entry_exit(pos, -normalize(dir_light.dir))[1], VOLUME_DENSITY_FACTOR);
+	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, find_entry_exit(pos, -normalize(dir_light.dir))[1], VOLUME_DENSITY_FACTOR * 40.0);
 	const float phase = hg_phase_func(dot(dir_light.dir, -dir));
 	const vec3 dirLighting = vec3(1.0f) * transmittance * dir_light.strength * phase;
 	return dirLighting;
@@ -235,7 +235,7 @@ vec3 TracePointLight(const vec3 pos, const vec3 dir)
 		return vec3(0.0);
 	}
 
-	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pointLight.pos, pos, VOLUME_DENSITY_FACTOR);
+	const float transmittance = BiasedRaymarchingTransmittanceEstimator(pointLight.pos, pos, VOLUME_DENSITY_FACTOR * 40.0);
 	const float phase = hg_phase_func(dot(normalize(pointLight.pos - pos), -dir));
 	const vec3 pointLighting = pointLight.color * pointLight.strength * transmittance * phase;
 	return pointLighting;
@@ -273,7 +273,7 @@ vec3 SampleHdrEnvMap(const vec3 pos, const vec3 dir, uint sampleCount)
 		const float phase = hg_phase_func(dot(randomDir, -dir));
 		const vec3 exit = find_entry_exit(pos, randomDir)[1];
 		//const float transmittance = GetTransmittance(pos, exit, 16);
-		const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, exit, VOLUME_DENSITY_FACTOR);
+		const float transmittance = BiasedRaymarchingTransmittanceEstimator(pos, exit, VOLUME_DENSITY_FACTOR * 40.0);
 		const vec3 sampleLight = SampleHdrEnvMap(randomDir) * phase * transmittance;
 
 		light += sampleLight;
