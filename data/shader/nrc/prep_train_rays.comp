@@ -134,9 +134,9 @@ void main()
 	const uint linearPixelIndexScaledToRender = GetTrainLinearPixelIndex(renderImageCoord.x, renderImageCoord.y, RENDER_WIDTH, RENDER_HEIGHT,
 		uint(float(TRAIN_BATCH_SIZE_HORIZONTAL) * TRAIN_X_DIST), uint(float(TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_Y_DIST));
 
-	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
-	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
-	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+//	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+//	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
+//	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
 
 //	vec4 primaryRayColor = imageLoad(primaryRayColorImage, trainImageCoord);
 //	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(TRAIN_WIDTH * TRAIN_HEIGHT));

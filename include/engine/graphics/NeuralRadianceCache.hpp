@@ -40,8 +40,6 @@ namespace en
 		static uint32_t sc_OutputCount;
 
 	private:
-		static const uint32_t sc_FilterFrameCountThreshold = 1;
-
 		uint32_t m_InferBatchSize = 0;
 		uint32_t m_TrainBatchSize = 0;
 		uint32_t m_InferBatchSizeVertical = 0;
