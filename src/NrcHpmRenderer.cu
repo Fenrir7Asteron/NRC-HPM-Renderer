@@ -553,6 +553,11 @@ namespace en
 		return m_ShouldBlend;
 	}
 
+	float NrcHpmRenderer::GetRayGenTimeMS() const
+	{
+		return m_TimePeriods[1] + m_TimePeriods[2] + m_TimePeriods[4];
+	}
+
 	float NrcHpmRenderer::GetFrameTimeMS() const
 	{
 		return m_TimePeriods[c_QueryCount - 1];

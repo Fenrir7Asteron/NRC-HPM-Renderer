@@ -106,7 +106,8 @@ namespace en
 				" | rBias: " + std::to_string(result.GetRelBias()) +
 				" | rVar: " + std::to_string(result.GetRelVar()) +
 				" | StdDev: " + std::to_string(result.GetCV()) +
-				" | Loss: " + std::to_string(renderer.GetLoss())
+				" | Loss: " + std::to_string(renderer.GetLoss()) +
+				" | Time: " + std::to_string(renderer.GetRayGenTimeMS())
 			);
 		}
 

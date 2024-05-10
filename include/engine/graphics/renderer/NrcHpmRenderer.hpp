@@ -35,6 +35,7 @@ namespace en
 		VkImage GetImage() const;
 		VkImageView GetImageView() const;
 		bool IsBlending() const;
+		float GetRayGenTimeMS() const;
 		float GetFrameTimeMS() const;
 		float GetLoss() const;
 
