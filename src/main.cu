@@ -149,8 +149,10 @@ void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, Bench
 			std::to_string(frameCount) + " " +
 			std::to_string(nrcResult.mse) + " " +
 			std::to_string(nrcResult.GetRelBias()) + " " +
+			std::to_string(nrcResult.GetRelVar()) + " " +
 			std::to_string(nrcResult.GetCV()) + " " +
-			std::to_string(nrcHpmRenderer->GetLoss())
+			std::to_string(nrcHpmRenderer->GetLoss()) + " " +
+			std::to_string(nrcHpmRenderer->GetRayGenTimeMS())
 		);
 	}
 	
@@ -160,7 +162,8 @@ void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, Bench
 		std::to_string(frameCount) + " " +
 		std::to_string(mcResult.mse) + " " +
 		std::to_string(mcResult.GetRelBias()) + " " +
-		std::to_string(mcResult.GetCV())
+		std::to_string(mcResult.GetRelVar()) + " " +
+		std::to_string(mcResult.GetCV()) 
 	);
 }
 

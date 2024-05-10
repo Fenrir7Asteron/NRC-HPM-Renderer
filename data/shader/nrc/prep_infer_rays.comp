@@ -30,6 +30,13 @@ void main()
 	const ivec2 imageCoord = ivec2(x, y);
 	const uint linearPixelIndex = (x * RENDER_HEIGHT) + y;
 
+	const uint linearBatchIndex = linearPixelIndex / INFER_BATCH_SIZE;
+	const uint batchCount = RENDER_HEIGHT * RENDER_WIDTH / INFER_BATCH_SIZE;
+
+	vec4 primaryRayColor = imageLoad(primaryRayColorImage, imageCoord);
+	primaryRayColor.r += (float(linearBatchIndex)) / (float(batchCount)) * 0.2f;
+	imageStore(primaryRayColorImage, imageCoord, primaryRayColor);
+
 	// Check if volume was hit
 	const vec4 primaryRayInfo = imageLoad(primaryRayInfoImage, imageCoord);
 	const bool didScatter = primaryRayInfo.x == 1.0;
@@ -41,6 +48,7 @@ void main()
 	StoreNrcInferInput(linearPixelIndex, rayOrigin, rayDir);
 
 	// Increment batch valid sample counter
-	const uint linearBatchIndex = linearPixelIndex / INFER_BATCH_SIZE;
+	
+
 	if (nrcInferFilter[linearBatchIndex] == 0) { atomicAdd(nrcInferFilter[linearBatchIndex], 1); }
 }
