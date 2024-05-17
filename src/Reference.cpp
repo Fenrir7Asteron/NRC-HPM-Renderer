@@ -584,15 +584,27 @@ namespace en
 			McHpmRenderer refRenderer(m_Width, m_Height, 64, true, m_RefCamera, scene);
 
 			// Create folder
-			std::filesystem::create_directory(referenceDirPath);
+			try
+			{
+				std::filesystem::create_directories(referenceDirPath);
+			}
+			catch (const std::filesystem::filesystem_error& e)
+			{
+				en::Log::Error(e.what(), true);
+			}
 
 			// Generate reference data
 			{
 				en::Log::Info("Generating reference image " + std::to_string(0));
 
 				// Generate reference image
-				for (size_t frame = 0; frame < 8192; frame++)
+				const size_t referenceFrameCount = 8192;
+				for (size_t frame = 0; frame < referenceFrameCount; frame++)
 				{
+					if (frame % 1000 == 0)
+					{
+						en::Log::Info("frame " + std::to_string(frame) + "/" + std::to_string(referenceFrameCount));
+					}
 					refRenderer.Render(queue);
 					ASSERT_VULKAN(vkQueueWaitIdle(queue));
 				}
