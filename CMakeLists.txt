@@ -23,10 +23,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC "include" ${CUDA_INC_PATH} "im
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 target_compile_features(${PROJECT_NAME} PUBLIC cuda_std_17)
 
-# Dependencies
-include("C:/Program Files/Microsoft Visual Studio/2022/Community/VC/vcpkg/scripts/buildsystems/vcpkg.cmake")
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
 # Vulkan
 find_package(Vulkan REQUIRED COMPONENTS glslc)
 find_program(glslc_executable NAMES glslc HINTS Vulkan::glslc)
@@ -39,7 +35,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan)
 
 set(SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/shader)
 set(SHADER_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/shader/include)
-set(SHADER_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/data/shader)
+set(SHADER_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/data/shader)
+
+set(IMAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/image)
+set(IMAGE_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/data/image)
+
+set(VOLUME_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/data/volume)
+set(VOLUME_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/data/volume)
 
 file(GLOB_RECURSE SHADERS
   ${SHADER_SOURCE_DIR}/*.vert
@@ -56,11 +58,12 @@ file(GLOB_RECURSE SHADERS
 
 add_custom_command(
   COMMAND
-    ${CMAKE_COMMAND} -E make_directory ${SHADER_BINARY_DIR}
-  OUTPUT ${SHADER_BINARY_DIR}
-  COMMENT "Creating ${SHADER_BINARY_DIR}"
+    ${CMAKE_COMMAND} -E make_directory ${SHADER_TARGET_DIR}
+  OUTPUT ${SHADER_TARGET_DIR}
+  COMMENT "Creating ${SHADER_TARGET_DIR}"
 )
 
+# COMPILE SHADERS TO SPIR-V
 foreach(source IN LISTS SHADERS)
   get_filename_component(FILENAME ${source} NAME)
   get_filename_component(FILE_PATH ${source} DIRECTORY)
@@ -73,7 +76,7 @@ foreach(source IN LISTS SHADERS)
     continue()
   endif()
 
-  string(REPLACE ${SHADER_SOURCE_DIR} ${SHADER_BINARY_DIR} FILE_PATH "${FILE_PATH}")
+  string(REPLACE ${SHADER_SOURCE_DIR} ${SHADER_TARGET_DIR} FILE_PATH "${FILE_PATH}")
 
   add_custom_command(
   COMMAND
@@ -85,7 +88,6 @@ foreach(source IN LISTS SHADERS)
   add_custom_command(
     COMMAND
       ${glslc_executable}
-      #      -MD -MF ${SHADER_BINARY_DIR}/${FILENAME}.d
       -I ${SHADER_INCLUDE_DIR}
       -o ${FILE_PATH}/${FILENAME}.spv
       ${source}
@@ -100,43 +102,60 @@ endforeach()
 
 add_custom_target(shaders ALL DEPENDS ${SPV_SHADERS})
 
-# CUDA
+
+# COPY DATA TO BUILD FOLDER
+file(COPY ${IMAGE_SOURCE_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/data)
+file(COPY ${VOLUME_SOURCE_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/data)
+
+
+# COPY VCPKG BUILT DLLs TO BUILD FOLDER
+file(GLOB REQUIRED_DLLS 
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/blosc_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/lz4_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/miniz_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/tbb_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/zlib_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/zstd_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/glfw3_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
+    "${CMAKE_SOURCE_DIR}/openvdb-install/bin/*.dll"
+)
+
+file(COPY ${REQUIRED_DLLS} DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
+
+# FIND PACKAGES. IF SOME PACKAGES ARE NOT FOUND, CHECK `INSTALLATION` SECTION OF README
+## CUDA
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
 
-# GLFW
-list(APPEND CMAKE_PREFIX_PATH "C:/Program Files/glfw")
+## GLFW
 find_package(glfw3 CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glfw)
 
-# GLM
+## GLM
 find_package(glm CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE glm::glm)
 
-# TINYEXR
+## TINYEXR
 find_package(tinyexr CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE unofficial::tinyexr::tinyexr)
 
-# ASSIMP
+## ASSIMP
 find_package(assimp CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp)
 
-# ZLIB
+## ZLIB
 find_package(ZLIB REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
 
-# TBB
+## TBB
 find_package(TBB CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE TBB::tbb TBB::tbbmalloc TBB::tbbmalloc_proxy)
 
-# OPENVDB
+## OPENVDB
 target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/openvdb-install/include")
 target_link_libraries(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/openvdb-install/lib/openvdb.lib")
 
-# BOOST
-target_include_directories(${PROJECT_NAME} PRIVATE $ENV{BOOST_INCLUDEDIR})
-target_link_directories(${PROJECT_NAME} PRIVATE $ENV{BOOST_LIBRARYDIR})
-
-# TCNN
+## TCNN
 set(TCNN_BUILD_BENCHMARK OFF)
 set(TCNN_BUILD_EXAMPLES OFF)
 add_subdirectory("tiny-cuda-nn")
