@@ -110,13 +110,6 @@ file(COPY ${VOLUME_SOURCE_DIR} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/data)
 
 # COPY VCPKG BUILT DLLs TO BUILD FOLDER
 file(GLOB REQUIRED_DLLS 
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/blosc_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/lz4_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/miniz_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/tbb_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/zlib_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/zstd_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
-    "${VCPKG_INSTALLED_DIR}/vcpkg/pkgs/glfw3_${VCPKG_TARGET_TRIPLET}/bin/*.dll"
     "${CMAKE_SOURCE_DIR}/openvdb-install/bin/*.dll"
 )
 
