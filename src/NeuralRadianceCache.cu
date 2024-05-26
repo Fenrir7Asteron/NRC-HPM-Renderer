@@ -108,7 +108,7 @@ namespace en
 
 		if (train) { 
 			auto start = std::chrono::steady_clock::now();
-			Train(); 
+			Train(trainFilter, trainFilteredFrameCounter);
 			auto end = std::chrono::steady_clock::now();
 			double elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
 			m_TrainTime = elapsed_ms;
