@@ -46,12 +46,17 @@ void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 d
 	const float phi = acos(dir.y / length(dir.xz));
 	const float normPhi = phi / PI;
 
+	// Calc density
+	const float invMaxDensity = 1.0 / VOLUME_DENSITY_FACTOR;
+	const float density = getDensity(pos) * invMaxDensity;
+
 	// Store train input
 	nrcTrainInput[linearPixelIndex].posX = normPos.x;
 	nrcTrainInput[linearPixelIndex].posY = normPos.y;
 	nrcTrainInput[linearPixelIndex].posZ = normPos.z;
 	nrcTrainInput[linearPixelIndex].theta = normTheta;
 	nrcTrainInput[linearPixelIndex].phi = normPhi;
+	nrcTrainInput[linearPixelIndex].density = density;
 
 	// Store train target
 	//target = log(vec3(1.0) + target);
