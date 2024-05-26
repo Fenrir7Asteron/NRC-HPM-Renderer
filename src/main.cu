@@ -378,6 +378,12 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				ImGui::Text("NRC Loss %f", nrcLoss);
 				ImGui::End();
 
+				ImGui::Begin("FPS");
+				ImGui::SetWindowFontScale(3.0f);
+				ImGui::Text("FPS %d", fps);
+				ImGui::SetWindowFontScale(1.0f);
+				ImGui::End();
+
 				ImGui::Begin("Controls");
 				shutdown = ImGui::Button("Shutdown");
 				ImGui::Checkbox("Restart after shutdown", &restartAfterClose);

@@ -154,6 +154,20 @@ namespace en
 
 		// Update
 		UpdateUniformBuffer();
+
+		float x = 64.0f;
+		float y = 0.0f;
+		float distance = 64.0f;
+		float currentAngle = 0.0f;
+		int stepCount = 100;
+		float stepAngleSize = 3.14159265359 * 2.0f / stepCount;
+		for (int i = 0; i < stepCount; ++i)
+		{
+			x = std::cos(currentAngle) * distance;
+			y = std::sin(currentAngle) * distance;
+			currentAngle += stepAngleSize;
+			en::Log::Info("Cam X Y: " + std::to_string(x) + " " + std::to_string(y));
+		}
 	}
 
 	void Camera::Destroy()

@@ -26,5 +26,10 @@ namespace en
         static GLFWwindow* m_WindowHandle;
         static glm::vec2 m_MousePos;
         static glm::vec2 m_MouseMove;
+
+        static glm::vec3 m_camPoints[100];
+
+        static float m_CurrentTime;
+        static bool m_UseCameraAnimationLoop;
     };
 }
