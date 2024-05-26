@@ -5,6 +5,7 @@
 *.exe
 *.pdb
 *.log
+*.png
 
 /.vs
 /.vscode
@@ -17,6 +18,7 @@
 /output
 /out
 /vcpkg_installed
+/openvdb-install
 
 CMakeCache.txt
 cmake_install.cmake
