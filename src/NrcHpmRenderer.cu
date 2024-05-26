@@ -224,7 +224,7 @@ namespace en
 		const Camera* camera,
 		const AppConfig& appConfig,
 		const HpmScene& hpmScene,
-		NeuralRadianceCache& nrc)
+		NeuralRadianceCache* nrc)
 		:
 		m_RenderWidth(width),
 		m_RenderHeight(height),
@@ -579,6 +579,11 @@ namespace en
 		return m_ShouldBlend;
 	}
 
+	float NrcHpmRenderer::GetRayGenTimeMS() const
+	{
+		return m_TimePeriods[1] + m_TimePeriods[2] + m_TimePeriods[4];
+	}
+
 	float NrcHpmRenderer::GetFrameTimeMS() const
 	{
 		return m_TimePeriods[c_QueryCount - 1];
@@ -586,7 +591,7 @@ namespace en
 
 	float NrcHpmRenderer::GetLoss() const
 	{
-		return m_Nrc.GetLoss();
+		return m_Nrc->GetLoss();
 	}
 
 	float NrcHpmRenderer::GetInferenceTime() const
@@ -650,7 +655,7 @@ namespace en
 		m_BlendIndex = 1;
 	}
 
-	const NeuralRadianceCache& NrcHpmRenderer::GetNrc()
+	const NeuralRadianceCache* NrcHpmRenderer::GetNrc()
 	{
 		return m_Nrc;
 	}
@@ -731,7 +736,7 @@ namespace en
 
 		// Calculate sizes
 		const size_t inferCount = m_RenderWidth * m_RenderHeight;
-		//inferCount += m_Nrc.GetInferBatchSize() - (inferCount % m_Nrc.GetTrainBatchSize());
+		//inferCount += m_Nrc->GetInferBatchSize() - (inferCount % m_Nrc->GetTrainBatchSize());
 		const size_t trainCount = m_TrainWidth * m_TrainHeight;
 
 		m_NrcInferInputBufferSize = inferCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
@@ -850,7 +855,7 @@ namespace en
 
 	void NrcHpmRenderer::CreateNrcInferFilterBuffer()
 	{
-		m_NrcInferFilterBufferSize = sizeof(uint32_t) * m_Nrc.GetInferBatchCount();
+		m_NrcInferFilterBufferSize = sizeof(uint32_t) * m_Nrc->GetInferBatchCount();
 		m_NrcInferFilterData = malloc(m_NrcInferFilterBufferSize);
 		
 		m_NrcInferFilterStagingBuffer = new vk::Buffer(

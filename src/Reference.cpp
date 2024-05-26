@@ -107,6 +107,7 @@ namespace en
 				" | rVar: " + std::to_string(result.GetRelVar()) +
 				" | StdDev: " + std::to_string(result.GetCV()) +
 				" | Loss: " + std::to_string(renderer.GetLoss()) +
+				" | RayGen Time: " + std::to_string(renderer.GetRayGenTimeMS()) +
 				" | Inference time: " + std::to_string(renderer.GetInferenceTime()) + "ms" +
 				" | Train time: " + std::to_string(renderer.GetTrainTime()) + "ms"
 			);

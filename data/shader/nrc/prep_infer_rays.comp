@@ -41,6 +41,13 @@ void main()
 //	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(RENDER_HEIGHT * RENDER_WIDTH));
 //	imageStore(primaryRayColorImage, imageCoord, primaryRayColor);
 
+	const uint linearBatchIndex = linearPixelIndex / INFER_BATCH_SIZE;
+	const uint batchCount = RENDER_HEIGHT * RENDER_WIDTH / INFER_BATCH_SIZE;
+
+	vec4 primaryRayColor = imageLoad(primaryRayColorImage, imageCoord);
+	primaryRayColor.r += (float(linearBatchIndex)) / (float(batchCount)) * 0.2f;
+	imageStore(primaryRayColorImage, imageCoord, primaryRayColor);
+
 	// Check if volume was hit
 	const vec4 primaryRayInfo = imageLoad(primaryRayInfoImage, imageCoord);
 	const bool didScatter = primaryRayInfo.x == 1.0;

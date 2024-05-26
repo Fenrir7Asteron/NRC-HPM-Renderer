@@ -53,7 +53,7 @@ void RecordSwapchainCommandBuffer(VkCommandBuffer commandBuffer, VkImage image)
 		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 		VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-	if (nrcHpmRenderer != nullptr && mcHpmRenderer != nullptr && en::ImGuiRenderer::IsInitialized())
+	if (en::ImGuiRenderer::IsInitialized())
 	{
 		VkImageCopy imageCopy;
 		imageCopy.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -138,26 +138,42 @@ struct BenchmarkStats
 	}
 };
 
-void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, BenchmarkStats& stats, en::LogFile& logFileNrc, en::LogFile& logFileMc)
+void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, BenchmarkStats& stats, en::LogFile& logFileNrc, en::LogFile& logFileMc, const en::AppConfig& appConfig)
 {
 	en::Log::Info("Frame: " + std::to_string(frameCount));
-	en::Reference::Result nrcResult = reference->CompareNrc(*nrcHpmRenderer, camera, queue);
-	en::Reference::Result mcResult = reference->CompareMc(*mcHpmRenderer, camera, queue);
-	logFileNrc.WriteLine(
-		std::to_string(frameCount) + " " + 
-		std::to_string(nrcResult.mse) + " " +
-		std::to_string(nrcResult.GetRelBias()) + " " +
-		std::to_string(nrcResult.GetCV()) + " " + 
-		std::to_string(nrcHpmRenderer->GetLoss()) + " " +
-		std::to_string(nrcHpmRenderer->GetInferenceTime()) + " " +
-		std::to_string(nrcHpmRenderer->GetTrainTime())
+	if (!appConfig.excludeNRCRenderer)
+	{
+		en::Reference::Result nrcResult = reference->CompareNrc(*nrcHpmRenderer, camera, queue);
+		en::Reference::Result mcResult = reference->CompareMc(*mcHpmRenderer, camera, queue);
+		logFileNrc.WriteLine(
+			std::to_string(frameCount) + " " + 
+			std::to_string(nrcResult.mse) + " " +
+			std::to_string(nrcResult.GetRelBias()) + " " +
+			std::to_string(nrcResult.GetCV()) + " " + 
+			std::to_string(nrcHpmRenderer->GetLoss()) + " " +
+			std::to_string(nrcHpmRenderer->GetInferenceTime()) + " " +
+			std::to_string(nrcHpmRenderer->GetTrainTime())
 	);
 
+		logFileNrc.WriteLine(
+			std::to_string(frameCount) + " " +
+			std::to_string(nrcResult.mse) + " " +
+			std::to_string(nrcResult.GetRelBias()) + " " +
+			std::to_string(nrcResult.GetRelVar()) + " " +
+			std::to_string(nrcResult.GetCV()) + " " +
+			std::to_string(nrcHpmRenderer->GetLoss()) + " " +
+			std::to_string(nrcHpmRenderer->GetRayGenTimeMS())
+		);
+	}
+	
+	en::Reference::Result mcResult = reference->CompareMc(*mcHpmRenderer, camera, queue);
+	
 	logFileMc.WriteLine(
 		std::to_string(frameCount) + " " +
 		std::to_string(mcResult.mse) + " " +
 		std::to_string(mcResult.GetRelBias()) + " " +
-		std::to_string(mcResult.GetCV())
+		std::to_string(mcResult.GetRelVar()) + " " +
+		std::to_string(mcResult.GetCV()) 
 	);
 }
 
@@ -196,14 +212,21 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	const VkQueue queue = en::VulkanAPI::GetGraphicsQueue();
 
 	// Renderer select
-	const std::vector<char*> rendererMenuItems = { "MC", "NRC", "Model" };
-	const char* currentRendererMenuItem = rendererMenuItems[1];
-	uint32_t rendererId = 1;
+	std::vector<char*> rendererMenuItems;
+	if (!appConfig.excludeNRCRenderer)
+		rendererMenuItems = { "MC", "NRC", "Model" };
+	else
+		rendererMenuItems = { "MC", "MC", "Model" };
+
+	uint32_t rendererId = appConfig.startupRenderer;
+	const char* currentRendererMenuItem = rendererMenuItems[rendererId];
 
 	// Init resources
 	en::Log::Info("Initializing rendering resources");
 
-	en::NeuralRadianceCache nrc(appConfig, width, height);
+	en::NeuralRadianceCache* nrc;
+	if (!appConfig.excludeNRCRenderer)
+		nrc = new en::NeuralRadianceCache(appConfig, width, height);
 
 	en::HpmScene hpmScene(appConfig);
 
@@ -231,14 +254,17 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 
 	en::SimpleModelRenderer modelRenderer(width, height, &camera);
 	
-	nrcHpmRenderer = new en::NrcHpmRenderer(
-		width,
-		height,
-		false,
-		&camera,
-		appConfig,
-		hpmScene,
-		nrc);
+	if (!appConfig.excludeNRCRenderer)
+	{
+		nrcHpmRenderer = new en::NrcHpmRenderer(
+			width,
+			height,
+			false,
+			&camera,
+			appConfig,
+			hpmScene,
+			nrc);
+	}
 
 	mcHpmRenderer = new en::McHpmRenderer(width, height, 32, false, &camera, hpmScene);
 
@@ -251,7 +277,14 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 			en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
 			break;
 		case 1: // NRC
-			en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+			if (!appConfig.excludeNRCRenderer)
+			{
+				en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+			}
+			else
+			{
+				en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
+			}
 			break;
 		case 2: // Model
 			en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
@@ -325,10 +358,21 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				mcHpmRenderer->EvaluateTimestampQueries();
 				break;
 			case 1: // NRC
-				nrcHpmRenderer->Render(queue, true);
-				result = vkQueueWaitIdle(queue);
-				ASSERT_VULKAN(result);
-				nrcHpmRenderer->EvaluateTimestampQueries();
+				if (!appConfig.excludeNRCRenderer)
+				{
+					nrcHpmRenderer->Render(queue, true);
+					result = vkQueueWaitIdle(queue);
+					ASSERT_VULKAN(result);
+					nrcHpmRenderer->EvaluateTimestampQueries();
+				}
+				else
+				{
+					mcHpmRenderer->Render(queue);
+					result = vkQueueWaitIdle(queue);
+					ASSERT_VULKAN(result);
+					mcHpmRenderer->EvaluateTimestampQueries();
+				}
+				
 				break;
 			case 2: // Model
 				modelRenderer.Render(queue);
@@ -341,7 +385,9 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 		}
 
 		//
-		const float nrcLoss = nrc.GetLoss();
+		float nrcLoss = -1.0f;
+		if (!appConfig.excludeNRCRenderer)
+			nrcLoss = nrc->GetLoss();
 
 		// Imgui
 		if (en::Input::IsKeyPressed(en::KEY_H))
@@ -375,7 +421,10 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				ImGui::Text((std::string("Framecount ") + std::to_string(frameCount)).c_str());
 				ImGui::Text("DeltaTime %f", deltaTime);
 				ImGui::Text("FPS %d", fps);
-				ImGui::Text("NRC Loss %f", nrcLoss);
+
+				if (!appConfig.excludeNRCRenderer)
+					ImGui::Text("NRC Loss %f", nrcLoss);
+
 				ImGui::End();
 
 				ImGui::Begin("FPS");
@@ -420,7 +469,10 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 									en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
 									break;
 								case 1: // NRC
-									en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+									if (!appConfig.excludeNRCRenderer)
+										en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+									else
+										en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
 									break;
 								case 2: // Model
 									en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
@@ -440,7 +492,8 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 				ImGui::End();
 
 				mcHpmRenderer->RenderImGui();
-				nrcHpmRenderer->RenderImGui();
+				if (!appConfig.excludeNRCRenderer)
+					nrcHpmRenderer->RenderImGui();
 
 				hpmScene.RenderImGui();
 
@@ -460,7 +513,10 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 					en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
 					break;
 				case 1: // NRC
-					en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+					if (!appConfig.excludeNRCRenderer)
+						en::ImGuiRenderer::SetBackgroundImageView(nrcHpmRenderer->GetImageView());
+					else
+						en::ImGuiRenderer::SetBackgroundImageView(mcHpmRenderer->GetImageView());
 					break;
 				case 2: // Model
 					en::ImGuiRenderer::SetBackgroundImageView(modelRenderer.GetColorImageView());
@@ -484,15 +540,24 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 
 		// Benchmark
 		stats.frameIndex = frameCount;
-		stats.frameTimeMS = nrcHpmRenderer->GetFrameTimeMS();
-		stats.loss = nrc.GetLoss();
-		if (benchmark && !hpmScene.IsDynamic() && frameCount % 1 == 0) { Benchmark(&camera, queue, frameCount, stats, logFileNrc, logFileMc); }
+		if (!appConfig.excludeNRCRenderer)
+		{
+			stats.frameTimeMS = nrcHpmRenderer->GetFrameTimeMS();
+			stats.loss = nrc->GetLoss();
+		}
+		else
+		{
+			stats.frameTimeMS = 0.0f;
+			stats.loss = -1.0f;
+		}
+		
+		if (benchmark && !hpmScene.IsDynamic() && frameCount % 1 == 0) { Benchmark(&camera, queue, frameCount, stats, logFileNrc, logFileMc, appConfig); }
 
 		// Exit if loss is invalid
 		if (std::isnan(nrcLoss) || std::isinf(nrcLoss))
 		{
 			en::Log::Error("NRC Loss is " + std::to_string(nrcLoss), false);
-			break;
+			//break;
 		}
 
 		// Exit
@@ -512,8 +577,14 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	mcHpmRenderer->Destroy();
 	delete mcHpmRenderer;
 	
-	nrcHpmRenderer->Destroy();
-	delete nrcHpmRenderer;
+	if (!appConfig.excludeNRCRenderer)
+	{
+		nrcHpmRenderer->Destroy();
+		delete nrcHpmRenderer;
+		nrc->Destroy();
+		delete nrc;
+	}
+	
 	en::ImGuiRenderer::Shutdown();
 	if (en::Window::IsSupported) { swapchain->Destroy(true); }
 
@@ -523,7 +594,6 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 
 	camera.Destroy();
 	hpmScene.Destroy();
-	nrc.Destroy();
 
 	en::VulkanAPI::Shutdown();
 	if (en::Window::IsSupported()) { en::Window::Shutdown(); }
@@ -550,7 +620,8 @@ int main(int argc, char** argv)
 			"64", "6", "18", "14", "1",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",
-			"0", "0"
+			"0", "0",
+			"1", "0"
 		};
 	}
 

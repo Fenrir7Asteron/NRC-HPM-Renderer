@@ -23,7 +23,7 @@ namespace en
 			const Camera* camera,
 			const AppConfig& appConfig,
 			const HpmScene& hpmScene,
-			NeuralRadianceCache& nrc);
+			NeuralRadianceCache* nrc);
 
 		void Render(VkQueue queue, bool train);
 		void Destroy();
@@ -35,6 +35,7 @@ namespace en
 		VkImage GetImage() const;
 		VkImageView GetImageView() const;
 		bool IsBlending() const;
+		float GetRayGenTimeMS() const;
 		float GetFrameTimeMS() const;
 		float GetLoss() const;
 		float GetInferenceTime() const;
@@ -44,7 +45,7 @@ namespace en
 		void SetCamera(VkQueue queue, const Camera* camera);
 		void SetBlend(bool blend);
 
-		const NeuralRadianceCache& GetNrc();
+		const NeuralRadianceCache* GetNrc();
 
 	private:
 		struct SpecializationData
@@ -102,7 +103,7 @@ namespace en
 
 		const Camera* m_Camera;
 		const HpmScene& m_HpmScene;
-		NeuralRadianceCache& m_Nrc;
+		NeuralRadianceCache* m_Nrc;
 
 		VkSemaphore m_CudaStartSemaphore;
 		cudaExternalSemaphore_t m_CuExtCudaStartSemaphore;

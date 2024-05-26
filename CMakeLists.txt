@@ -85,16 +85,31 @@ foreach(source IN LISTS SHADERS)
   COMMENT "Creating ${FILE_PATH}"
   )
 
-  add_custom_command(
-    COMMAND
-      ${glslc_executable}
-      -I ${SHADER_INCLUDE_DIR}
-      -o ${FILE_PATH}/${FILENAME}.spv
-      ${source}
-    OUTPUT ${FILE_PATH}/${FILENAME}.spv
-    DEPENDS ${source} ${FILE_PATH}
-    COMMENT "Compiling ${FILENAME}"
-  )
+  if (CMAKE_BUILD_TYPE MATCHES Debug)
+    add_custom_command(
+        COMMAND
+          ${glslc_executable}
+          -I ${SHADER_INCLUDE_DIR}
+          -o ${FILE_PATH}/${FILENAME}.spv
+          -g
+          ${source}
+        OUTPUT ${FILE_PATH}/${FILENAME}.spv
+        DEPENDS ${source} ${FILE_PATH}
+        COMMENT "Compiling ${FILENAME}"
+    )
+  else()
+     add_custom_command(
+        COMMAND
+          ${glslc_executable}
+          -I ${SHADER_INCLUDE_DIR}
+          -o ${FILE_PATH}/${FILENAME}.spv
+          ${source}
+        OUTPUT ${FILE_PATH}/${FILENAME}.spv
+        DEPENDS ${source} ${FILE_PATH}
+        COMMENT "Compiling ${FILENAME}"
+     )
+  endif()
+
   list(APPEND SPV_SHADERS ${FILE_PATH}/${FILENAME}.spv)
   message(STATUS "Shader include path: ${SHADER_INCLUDE_DIR}")
   message(STATUS ${FILE_PATH}/${FILENAME}.spv)
