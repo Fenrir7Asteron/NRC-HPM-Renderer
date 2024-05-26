@@ -53,16 +53,18 @@ namespace en
 			uint32_t renderHeight;
 			uint32_t trainWidth;
 			uint32_t trainHeight;
-			uint32_t trainXDist;
-			uint32_t trainYDist;
+			float trainXDist;
+			float trainYDist;
 			uint32_t trainSpp;
 			uint32_t primaryRayLength;
 			float primaryRayProb;
 			uint32_t trainRingBufSize;
 			uint32_t trainRayLength;
 
-			uint32_t inferBatchSize;
-			uint32_t trainBatchSize;
+			uint32_t inferBatchSizeVertical;
+			uint32_t inferBatchSizeHorizontal;
+			uint32_t trainBatchSizeVertical;
+			uint32_t trainBatchSizeHorizontal;
 
 			float volumeSizeX;
 			float volumeSizeY;
@@ -87,8 +89,8 @@ namespace en
 		uint32_t m_RenderHeight = 0;
 		uint32_t m_TrainWidth = 0;
 		uint32_t m_TrainHeight = 0;
-		uint32_t m_TrainXDist = 0;
-		uint32_t m_TrainYDist = 0;
+		float m_TrainXDist = 0;
+		float m_TrainYDist = 0;
 		uint32_t m_TrainSpp = 0;
 		uint32_t m_PrimaryRayLength = 0;
 		float m_PrimaryRayProb = 0.0f;
@@ -136,8 +138,21 @@ namespace en
 		vk::Buffer* m_NrcInferFilterStagingBuffer = nullptr;
 		vk::Buffer* m_NrcInferFilterBuffer = nullptr;
 
+		VkDeviceSize m_NrcTrainFilterBufferSize = 0;
+		void* m_NrcTrainFilterData = nullptr;
+		vk::Buffer* m_NrcTrainFilterStagingBuffer = nullptr;
+		vk::Buffer* m_NrcTrainFilterBuffer = nullptr;
+
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
+
+		/*VkDeviceSize m_NrcInferBatchMappingBufferSize;
+		void* m_NrcInferBatchMappingData;
+		vk::Buffer* m_NrcInferBatchMappingBuffer = nullptr;
+
+		VkDeviceSize m_NrcTrainBatchMappingBufferSize;
+		void* m_NrcTrainBatchMappingData;
+		vk::Buffer* m_NrcTrainBatchMappingBuffer = nullptr;*/
 
 		VkPipelineLayout m_PipelineLayout;
 
@@ -186,7 +201,7 @@ namespace en
 		VkDescriptorSet m_DescSet;
 
 		const float c_TimestampPeriodInMS = VulkanAPI::GetTimestampPeriod() * 1e-6f;
-		const uint32_t c_QueryCount = 8;
+		const uint32_t c_QueryCount = 9;
 		std::vector<float> m_TimePeriods = std::vector<float>(c_QueryCount);
 		uint32_t m_QueryIndex = 0;
 		VkQueryPool m_QueryPool;
@@ -196,12 +211,13 @@ namespace en
 		VkCommandBuffer m_PostCudaCommandBuffer;
 		VkCommandBuffer m_RandomTasksCmdBuf;
 
-		void CalcTrainSubset(uint32_t trainPixelCount);
+		void CalcTrainSubset();
 
 		void CreateSyncObjects(VkDevice device);
 
 		void CreateNrcBuffers();
 		void CreateNrcInferFilterBuffer();
+		void CreateNrcTrainFilterBuffer();
 		void CreateNrcTrainRingBuffer();
 
 		void CreatePipelineLayout(VkDevice device);

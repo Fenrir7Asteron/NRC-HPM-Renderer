@@ -30,13 +30,8 @@ void LoadFromRingBuffer(out vec3 pos, out vec3 dir)
 	dir.z = nrcTrainRingBuffer[prevTail].dirZ;
 }
 
-void StoreNrcTrainData(const ivec2 trainImageCoord, const vec3 pos, const vec3 dir, vec3 target, const bool didScatter)
+void StoreNrcTrainData(const uint linearPixelIndex, const vec3 pos, const vec3 dir, vec3 target, const bool didScatter)
 {
-	// Calc index
-	const uint x = trainImageCoord.x;
-	const uint y = trainImageCoord.y;
-	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
-
 	// Norm pos
 	const vec3 normPos = (pos / skySize) + (skySize / 2.0);
 
@@ -106,11 +101,13 @@ vec4 TracePath(const vec3 rayOrigin, const vec3 rayDir)
 void main()
 {
 	// Get image coord
-	const uint x = gl_GlobalInvocationID.x;
-	const uint y = gl_GlobalInvocationID.y;
+	uint x = gl_GlobalInvocationID.x;
+	uint y = gl_GlobalInvocationID.y;
 	const ivec2 trainImageCoord = ivec2(x, y);
-	const ivec2 renderImageCoord = trainImageCoord * ivec2(TRAIN_X_DIST, TRAIN_Y_DIST);
+	const ivec2 renderImageCoord = ivec2(float(trainImageCoord.x) * TRAIN_X_DIST, float(trainImageCoord.y) * TRAIN_Y_DIST);
 	const vec2 fragUV = vec2(float(x) * ONE_OVER_RENDER_WIDTH, float(y) * ONE_OVER_RENDER_HEIGHT);
+
+	//y = TRAIN_HEIGHT - y;
 
 	// Setup random
 	InitRandom(fragUV);
@@ -135,9 +132,33 @@ void main()
 	for (uint i = 0; i < TRAIN_SPP; i++) { target += TracePath(rayOrigin, rayDir).xyz; }
 	target /= float(TRAIN_SPP);
 
+	// Calc index
+	//const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+
+	const uint linearPixelIndex = GetTrainLinearPixelIndex(x, y, TRAIN_WIDTH, TRAIN_HEIGHT, TRAIN_BATCH_SIZE_HORIZONTAL, TRAIN_BATCH_SIZE_VERTICAL);
+	const uint linearPixelIndexScaledToRender = GetTrainLinearPixelIndex(renderImageCoord.x, renderImageCoord.y, RENDER_WIDTH, RENDER_HEIGHT,
+		uint(float(TRAIN_BATCH_SIZE_HORIZONTAL) * TRAIN_X_DIST), uint(float(TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_Y_DIST));
+
+//	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+//	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
+//	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+
+//	vec4 primaryRayColor = imageLoad(primaryRayColorImage, trainImageCoord);
+//	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(TRAIN_WIDTH * TRAIN_HEIGHT));
+//	imageStore(primaryRayColorImage, trainImageCoord, primaryRayColor);
+
 	// Store train data
 	if (TRAIN_RING_BUF_SIZE > 0)
 	{
-		StoreNrcTrainData(trainImageCoord, rayOrigin, rayDir, target, didScatter);
+		StoreNrcTrainData(linearPixelIndex, rayOrigin, rayDir, target, didScatter);
+	}
+
+	// Increment batch valid sample counter
+	if (didScatter)
+	{
+		const uint trainBatchCountHorizontal = TRAIN_WIDTH / TRAIN_BATCH_SIZE_HORIZONTAL;
+		const uint linearBatchIndex = y / TRAIN_BATCH_SIZE_VERTICAL * trainBatchCountHorizontal 
+									+ x / TRAIN_BATCH_SIZE_HORIZONTAL;
+		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
 	}
 }

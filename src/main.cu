@@ -203,7 +203,7 @@ bool RunAppConfigInstance(const en::AppConfig& appConfig)
 	// Init resources
 	en::Log::Info("Initializing rendering resources");
 
-	en::NeuralRadianceCache nrc(appConfig);
+	en::NeuralRadianceCache nrc(appConfig, width, height);
 
 	en::HpmScene hpmScene(appConfig);
 
@@ -546,11 +546,11 @@ int main(int argc, char** argv)
 		myargv = { 
 			"NRC-HPM-Renderer", 
 			"RelativeL2Luminance", "Adam", "0.01", "0.99",
-			"0", "0", "0",
-			"64", "6", "21", "14", "4",
+			"0", "0", 
+			"64", "6", "18", "14", "1",
 			"4", 
 			"1.0", "1", "1", "0.0", "32",
-			"1", "0"
+			"0", "0"
 		};
 	}
 

@@ -137,6 +137,13 @@ namespace en
 		nrcInferFilterBufferBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		nrcInferFilterBufferBinding.pImmutableSamplers = nullptr;
 
+		VkDescriptorSetLayoutBinding nrcTrainFilterBufferBinding;
+		nrcTrainFilterBufferBinding.binding = bindingIndex++;
+		nrcTrainFilterBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		nrcTrainFilterBufferBinding.descriptorCount = 1;
+		nrcTrainFilterBufferBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		nrcTrainFilterBufferBinding.pImmutableSamplers = nullptr;
+
 		VkDescriptorSetLayoutBinding nrcTrainRingBufferBinding;
 		nrcTrainRingBufferBinding.binding = bindingIndex++;
 		nrcTrainRingBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -162,6 +169,7 @@ namespace en
 			nrcTrainInputBufferBinding,
 			nrcTrainTargetBufferBinding,
 			nrcInferFilterBufferBinding,
+			nrcTrainFilterBufferBinding,
 			nrcTrainRingBufferBinding,
 			uniformBufferBinding
 		};
@@ -182,8 +190,8 @@ namespace en
 		storageImagePS.descriptorCount = 5;
 
 		VkDescriptorPoolSize storageBufferPS;
-		storageBufferPS.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-		storageBufferPS.descriptorCount = 6;
+		storageBufferPS.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		storageBufferPS.descriptorCount = 7;
 
 		VkDescriptorPoolSize uniformBufferPS;
 		uniformBufferPS.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -244,8 +252,7 @@ namespace en
 
 
 		// Calc train subset
-		const uint32_t trainPixelCount = appConfig.trainBatchCount * m_Nrc.GetTrainBatchSize();
-		CalcTrainSubset(trainPixelCount);
+		CalcTrainSubset();
 
 		// Calc train ring buffer size
 		m_TrainRingBufSize = static_cast<uint32_t>(appConfig.trainRingBufSize * static_cast<float>(m_TrainWidth * m_TrainHeight));
@@ -257,7 +264,7 @@ namespace en
 
 		CreateNrcBuffers();
 		m_Nrc.Init(
-			m_RenderWidth * m_RenderHeight,
+			m_RenderWidth, m_RenderHeight,
 			reinterpret_cast<float*>(m_NrcInferInputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcInferOutputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcTrainInputDCuBuffer),
@@ -265,6 +272,7 @@ namespace en
 			m_CuExtCudaStartSemaphore, 
 			m_CuExtCudaFinishedSemaphore);
 		CreateNrcInferFilterBuffer();
+		CreateNrcTrainFilterBuffer();
 		CreateNrcTrainRingBuffer();
 
 		m_CommandPool.AllocateBuffers(3, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -328,13 +336,16 @@ namespace en
 		VkResult result = vkQueueSubmit(queue, 1, &submitInfo, m_PreCudaFence);
 		ASSERT_VULKAN(result);
 
-		// Sync infer filter
+		// Sync infer and train filters
 		ASSERT_VULKAN(vkWaitForFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence, VK_TRUE, UINT64_MAX));
 		m_NrcInferFilterStagingBuffer->GetData(m_NrcInferFilterBufferSize, m_NrcInferFilterData, 0, 0);
+		m_NrcTrainFilterStagingBuffer->GetData(m_NrcTrainFilterBufferSize, m_NrcTrainFilterData, 0, 0);
 		ASSERT_VULKAN(vkResetFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence));
 
 		// Cuda
-		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData), train);
+		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData),
+			reinterpret_cast<uint32_t*>(m_NrcTrainFilterData),
+			train);
 
 		// Post cuda
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -408,6 +419,12 @@ namespace en
 		delete m_NrcInferFilterStagingBuffer;
 		delete m_NrcInferFilterData;
 
+		m_NrcTrainFilterBuffer->Destroy();
+		delete m_NrcTrainFilterBuffer;
+		m_NrcTrainFilterStagingBuffer->Destroy();
+		delete m_NrcTrainFilterStagingBuffer;
+		delete m_NrcTrainFilterData;
+
 		m_NrcTrainTargetBuffer->Destroy();
 		delete m_NrcTrainTargetBuffer;
 		ASSERT_CUDA(cudaDestroyExternalMemory(m_NrcTrainTargetCuExtMem));
@@ -423,6 +440,14 @@ namespace en
 		m_NrcInferInputBuffer->Destroy();
 		delete m_NrcInferInputBuffer;
 		ASSERT_CUDA(cudaDestroyExternalMemory(m_NrcInferInputCuExtMem));
+
+		/*m_NrcInferBatchMappingBuffer->Destroy();
+		delete m_NrcInferBatchMappingBuffer;
+		delete m_NrcInferBatchMappingData;
+
+		m_NrcTrainBatchMappingBuffer->Destroy();
+		delete m_NrcTrainBatchMappingBuffer;
+		delete m_NrcTrainBatchMappingData;*/
 
 		vkDestroyFence(device, m_PostCudaFence, nullptr);
 		vkDestroyFence(device, m_PreCudaFence, nullptr);
@@ -524,6 +549,7 @@ namespace en
 		ImGui::Text("PrepInferRays Time %f ms", m_TimePeriods[periodIndex++]);
 		ImGui::Text("Copy Infer Filter Time %f ms", m_TimePeriods[periodIndex++]);
 		ImGui::Text("PrepTrainRays Time %f ms", m_TimePeriods[periodIndex++]);
+		ImGui::Text("Copy Train Filter Time %f ms", m_TimePeriods[periodIndex++]);
 		ImGui::Text("Cuda Time %f ms", m_TimePeriods[periodIndex++]);
 		ImGui::Text("Render Time %f ms", m_TimePeriods[periodIndex++]);
 		ImGui::Text("Total Time %f ms", m_TimePeriods[periodIndex++]);
@@ -629,38 +655,18 @@ namespace en
 		return m_Nrc;
 	}
 
-	void NrcHpmRenderer::CalcTrainSubset(uint32_t trainPixelCount)
+	void NrcHpmRenderer::CalcTrainSubset()
 	{
-		const uint32_t sqrt = std::sqrt(trainPixelCount);
-		for (uint32_t factor = sqrt; factor >= 2; factor--)
-		{
-			if (trainPixelCount % factor == 0)
-			{
-				const uint32_t otherFactor = trainPixelCount / factor;
-				const uint32_t biggerFactor = std::max(factor, otherFactor);
-				const uint32_t smallerFactor = std::min(factor, otherFactor);
-				
-				if (m_RenderWidth > m_RenderHeight)
-				{
-					m_TrainWidth = biggerFactor;
-					m_TrainHeight = smallerFactor;
-				}
-				else
-				{
-					m_TrainWidth = smallerFactor;
-					m_TrainHeight = biggerFactor;
-				}
+		m_TrainWidth = m_Nrc.GetTrainBatchCountHorizontal() * m_Nrc.GetTrainBatchSizeHorizontal();
+		m_TrainHeight = m_Nrc.GetTrainBatchCountVertical() * m_Nrc.GetTrainBatchSizeVertical();
 
-				m_TrainXDist = m_RenderWidth / m_TrainWidth;
-				m_TrainYDist = m_RenderHeight / m_TrainHeight;
+		m_TrainXDist = ((float)m_RenderWidth) / m_TrainWidth;
+		m_TrainYDist = ((float)m_RenderHeight) / m_TrainHeight;
 
-				en::Log::Warn("Train pixel count: " + std::to_string(trainPixelCount) + ", m_TrainXDist: " + std::to_string(m_TrainXDist) + ", m_TrainYDist: " + std::to_string(m_TrainYDist));
-
-				return;
-			}
-		}
-
-		en::Log::Error("Could not find suitable division of trainPixelCount", true);
+		en::Log::Warn( "m_TrainWidth: " + std::to_string(m_TrainWidth) 
+			+ ", m_TrainHeight: " + std::to_string(m_TrainHeight)
+			+ ", m_TrainXDist: " + std::to_string(m_TrainXDist) 
+			+ ", m_TrainYDist : " + std::to_string(m_TrainYDist));
 	}
 
 	void NrcHpmRenderer::CreateSyncObjects(VkDevice device)
@@ -729,7 +735,7 @@ namespace en
 		const size_t trainCount = m_TrainWidth * m_TrainHeight;
 
 		m_NrcInferInputBufferSize = inferCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
-		m_NrcInferOutputBufferSize = inferCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
+		m_NrcInferOutputBufferSize = inferCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);		
 		m_NrcTrainInputBufferSize = trainCount * NeuralRadianceCache::sc_InputCount * sizeof(float);
 		m_NrcTrainTargetBufferSize = trainCount * NeuralRadianceCache::sc_OutputCount * sizeof(float);
 
@@ -860,6 +866,25 @@ namespace en
 			{});
 	}
 
+	void NrcHpmRenderer::CreateNrcTrainFilterBuffer()
+	{
+		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
+		m_NrcTrainFilterBufferSize = sizeof(uint32_t) * trainBatchCount;
+		m_NrcTrainFilterData = malloc(m_NrcTrainFilterBufferSize);
+
+		m_NrcTrainFilterStagingBuffer = new vk::Buffer(
+			m_NrcTrainFilterBufferSize,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			{});
+
+		m_NrcTrainFilterBuffer = new vk::Buffer(
+			m_NrcTrainFilterBufferSize,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			{});
+	}
+
 	void NrcHpmRenderer::CreateNrcTrainRingBuffer()
 	{
 		const VkDeviceSize headAndTailSize = 2 * sizeof(uint32_t);
@@ -946,8 +971,10 @@ namespace en
 		m_SpecData.trainRingBufSize = m_TrainRingBufSize;
 		m_SpecData.trainRayLength = m_TrainRayLength;
 
-		m_SpecData.inferBatchSize = m_Nrc.GetInferBatchSize();
-		m_SpecData.trainBatchSize = m_Nrc.GetTrainBatchSize();
+		m_SpecData.inferBatchSizeVertical = m_Nrc.GetInferBatchSizeVertical();
+		m_SpecData.inferBatchSizeHorizontal = m_Nrc.GetInferBatchSizeHorizontal();
+		m_SpecData.trainBatchSizeVertical = m_Nrc.GetTrainBatchSizeVertical();
+		m_SpecData.trainBatchSizeHorizontal = m_Nrc.GetTrainBatchSizeHorizontal();
 
 		m_SpecData.volumeSizeX = volumeSizeF.x;
 		m_SpecData.volumeSizeY = volumeSizeF.y;
@@ -983,12 +1010,12 @@ namespace en
 		VkSpecializationMapEntry trainXDistEntry{};
 		trainXDistEntry.constantID = constantID++;
 		trainXDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainXDist);
-		trainXDistEntry.size = sizeof(uint32_t);
+		trainXDistEntry.size = sizeof(float);
 
 		VkSpecializationMapEntry trainYDistEntry{};
 		trainYDistEntry.constantID = constantID++;
-		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainXDist);
-		trainYDistEntry.size = sizeof(uint32_t);
+		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainYDist);
+		trainYDistEntry.size = sizeof(float);
 
 		VkSpecializationMapEntry trainSppEntry;
 		trainSppEntry.constantID = constantID++;
@@ -1015,15 +1042,25 @@ namespace en
 		trainRayLengthEntry.offset = offsetof(SpecializationData, SpecializationData::trainRayLength);
 		trainRayLengthEntry.size = sizeof(uint32_t);
 
-		VkSpecializationMapEntry inferBatchSizeEntry{};
-		inferBatchSizeEntry.constantID = constantID++;
-		inferBatchSizeEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSize);
-		inferBatchSizeEntry.size = sizeof(uint32_t);
+		VkSpecializationMapEntry inferBatchSizeVerticalEntry{};
+		inferBatchSizeVerticalEntry.constantID = constantID++;
+		inferBatchSizeVerticalEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSizeVertical);
+		inferBatchSizeVerticalEntry.size = sizeof(uint32_t);
 
-		VkSpecializationMapEntry trainBatchSizeEntry;
-		trainBatchSizeEntry.constantID = constantID++;
-		trainBatchSizeEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSize);
-		trainBatchSizeEntry.size = sizeof(uint32_t);
+		VkSpecializationMapEntry inferBatchSizeHorizontalEntry{};
+		inferBatchSizeHorizontalEntry.constantID = constantID++;
+		inferBatchSizeHorizontalEntry.offset = offsetof(SpecializationData, SpecializationData::inferBatchSizeHorizontal);
+		inferBatchSizeHorizontalEntry.size = sizeof(uint32_t);
+
+		VkSpecializationMapEntry trainBatchSizeVerticalEntry;
+		trainBatchSizeVerticalEntry.constantID = constantID++;
+		trainBatchSizeVerticalEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSizeVertical);
+		trainBatchSizeVerticalEntry.size = sizeof(uint32_t);
+
+		VkSpecializationMapEntry trainBatchSizeHorizontalEntry;
+		trainBatchSizeHorizontalEntry.constantID = constantID++;
+		trainBatchSizeHorizontalEntry.offset = offsetof(SpecializationData, SpecializationData::trainBatchSizeHorizontal);
+		trainBatchSizeHorizontalEntry.size = sizeof(uint32_t);
 
 		VkSpecializationMapEntry volumeSizeXEntry;
 		volumeSizeXEntry.constantID = constantID++;
@@ -1066,8 +1103,10 @@ namespace en
 			primaryRayLengthEntry,
 			primaryRayProbEntry,
 			trainRingBufSizeEntry,
-			inferBatchSizeEntry,
-			trainBatchSizeEntry,
+			inferBatchSizeVerticalEntry,
+			inferBatchSizeHorizontalEntry,
+			trainBatchSizeVerticalEntry,
+			trainBatchSizeHorizontalEntry,
 			volumeSizeXEntry,
 			volumeSizeYEntry,
 			volumeSizeZEntry,
@@ -1915,6 +1954,23 @@ namespace en
 		nrcInferFilterBufferWrite.pBufferInfo = &nrcInferFilterBufferInfo;
 		nrcInferFilterBufferWrite.pTexelBufferView = nullptr;
 
+		VkDescriptorBufferInfo nrcTrainFilterBufferInfo;
+		nrcTrainFilterBufferInfo.buffer = m_NrcTrainFilterBuffer->GetVulkanHandle();
+		nrcTrainFilterBufferInfo.offset = 0;
+		nrcTrainFilterBufferInfo.range = m_NrcTrainFilterBufferSize;
+
+		VkWriteDescriptorSet nrcTrainFilterBufferWrite;
+		nrcTrainFilterBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		nrcTrainFilterBufferWrite.pNext = nullptr;
+		nrcTrainFilterBufferWrite.dstSet = m_DescSet;
+		nrcTrainFilterBufferWrite.dstBinding = bindingIndex++;
+		nrcTrainFilterBufferWrite.dstArrayElement = 0;
+		nrcTrainFilterBufferWrite.descriptorCount = 1;
+		nrcTrainFilterBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		nrcTrainFilterBufferWrite.pImageInfo = nullptr;
+		nrcTrainFilterBufferWrite.pBufferInfo = &nrcTrainFilterBufferInfo;
+		nrcTrainFilterBufferWrite.pTexelBufferView = nullptr;
+
 		VkDescriptorBufferInfo nrcTrainRingBufferInfo;
 		nrcTrainRingBufferInfo.buffer = m_NrcTrainRingBuffer->GetVulkanHandle();
 		nrcTrainRingBufferInfo.offset = 0;
@@ -1962,6 +2018,7 @@ namespace en
 			nrcTrainInputBufferWrite,
 			nrcTrainTargetBufferWrite,
 			nrcInferFilterBufferWrite,
+			nrcTrainFilterBufferWrite,
 			nrcTrainRingBufferWrite,
 			uniformBufferWrite
 		};
@@ -2020,6 +2077,7 @@ namespace en
 		vkCmdFillBuffer(m_PreCudaCommandBuffer, m_NrcTrainInputBuffer->GetVulkanHandle(), 0, VK_WHOLE_SIZE, 0);
 		vkCmdFillBuffer(m_PreCudaCommandBuffer, m_NrcTrainTargetBuffer->GetVulkanHandle(), 0, VK_WHOLE_SIZE, 0);
 		vkCmdFillBuffer(m_PreCudaCommandBuffer, m_NrcInferFilterBuffer->GetVulkanHandle(), 0, VK_WHOLE_SIZE, 0);
+		vkCmdFillBuffer(m_PreCudaCommandBuffer, m_NrcTrainFilterBuffer->GetVulkanHandle(), 0, VK_WHOLE_SIZE, 0);
 
 		// Clear using shader
 		vkCmdBindPipeline(m_PreCudaCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ClearPipeline);
@@ -2060,6 +2118,21 @@ namespace en
 		// Prep train rays
 		vkCmdBindPipeline(m_PreCudaCommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_PrepTrainRaysPipeline);
 		vkCmdDispatch(m_PreCudaCommandBuffer, m_TrainWidth / 32, m_TrainHeight, 1);
+
+		// Timestamp
+		vkCmdWriteTimestamp(m_PreCudaCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, m_QueryPool, m_QueryIndex++);
+
+		// Copy nrc train filter buffer to host
+		VkBufferCopy nrcTrainFilterCopy;
+		nrcTrainFilterCopy.srcOffset = 0;
+		nrcTrainFilterCopy.dstOffset = 0;
+		nrcTrainFilterCopy.size = m_NrcTrainFilterBufferSize;
+		vkCmdCopyBuffer(
+			m_PreCudaCommandBuffer,
+			m_NrcTrainFilterBuffer->GetVulkanHandle(),
+			m_NrcTrainFilterStagingBuffer->GetVulkanHandle(),
+			1,
+			&nrcTrainFilterCopy);
 
 		// Timestamp
 		vkCmdWriteTimestamp(m_PreCudaCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, m_QueryPool, m_QueryIndex++);

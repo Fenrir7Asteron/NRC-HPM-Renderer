@@ -8,7 +8,8 @@ vec3 LoadNrcInferOutput(const ivec2 imageCoord)
 {
 	const uint x = imageCoord.x;
 	const uint y = imageCoord.y;
-	const uint linearPixelIndex = (x * RENDER_HEIGHT) + y;
+	// Map 2D image coordinates to 1D infer buffer coordinate
+	const uint linearPixelIndex = GetInferLinearPixelIndex(x, y, RENDER_WIDTH, RENDER_HEIGHT, INFER_BATCH_SIZE_HORIZONTAL, INFER_BATCH_SIZE_VERTICAL);
 
 	vec3 color;
 	color.x = nrcInferOutput[linearPixelIndex].r;

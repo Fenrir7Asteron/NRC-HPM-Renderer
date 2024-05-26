@@ -3,6 +3,7 @@
 #ifdef NRC
 #include "nrc-descriptors.glsl"
 #include "nrc-constants.glsl"
+#include "nrc-indexing.glsl"
 #endif
 
 #ifdef RESTIR

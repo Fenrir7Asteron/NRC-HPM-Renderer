@@ -30,10 +30,16 @@ void StoreNrcInferInput(const uint linearPixelIndex, const vec3 pos, const vec3 
 
 void main()
 {
-	const uint x = gl_GlobalInvocationID.x;
-	const uint y = gl_GlobalInvocationID.y;
+	uint x = gl_GlobalInvocationID.x;
+	uint y = gl_GlobalInvocationID.y;
 	const ivec2 imageCoord = ivec2(x, y);
-	const uint linearPixelIndex = (x * RENDER_HEIGHT) + y;
+
+	// Map 2D image coordinates to 1D infer buffer coordinate
+	const uint linearPixelIndex = GetInferLinearPixelIndex(x, y, RENDER_WIDTH, RENDER_HEIGHT, INFER_BATCH_SIZE_HORIZONTAL, INFER_BATCH_SIZE_VERTICAL);
+
+//	vec4 primaryRayColor = imageLoad(primaryRayColorImage, imageCoord);
+//	primaryRayColor.r += sqrt(float(linearPixelIndex)) / sqrt(float(RENDER_HEIGHT * RENDER_WIDTH));
+//	imageStore(primaryRayColorImage, imageCoord, primaryRayColor);
 
 	// Check if volume was hit
 	const vec4 primaryRayInfo = imageLoad(primaryRayInfoImage, imageCoord);
@@ -46,6 +52,9 @@ void main()
 	StoreNrcInferInput(linearPixelIndex, rayOrigin, rayDir);
 
 	// Increment batch valid sample counter
-	const uint linearBatchIndex = linearPixelIndex / INFER_BATCH_SIZE;
+	const uint inferBatchCountHorizontal = uint(ceil(float(RENDER_WIDTH) / INFER_BATCH_SIZE_HORIZONTAL));
+	const uint batchIndexVertical = y / INFER_BATCH_SIZE_VERTICAL;
+	const uint batchIndexHorizontal = x / INFER_BATCH_SIZE_HORIZONTAL;
+	const uint linearBatchIndex = batchIndexVertical * inferBatchCountHorizontal + batchIndexHorizontal;
 	if (nrcInferFilter[linearBatchIndex] == 0) { atomicAdd(nrcInferFilter[linearBatchIndex], 1); }
 }
