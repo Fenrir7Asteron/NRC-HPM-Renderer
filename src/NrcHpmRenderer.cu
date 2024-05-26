@@ -589,6 +589,16 @@ namespace en
 		return m_Nrc.GetLoss();
 	}
 
+	float NrcHpmRenderer::GetInferenceTime() const
+	{
+		return m_Nrc.GetInferenceTime();
+	}
+
+	float NrcHpmRenderer::GetTrainTime() const
+	{
+		return m_Nrc.GetTrainTime();
+	}
+
 	void NrcHpmRenderer::SetCamera(VkQueue queue, const Camera* camera)
 	{
 		// Set members

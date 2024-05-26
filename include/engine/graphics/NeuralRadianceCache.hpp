@@ -27,6 +27,8 @@ namespace en
 		void Destroy();
 
 		float GetLoss() const;
+		float GetInferenceTime() const;
+		float GetTrainTime() const;
 		size_t GetInferBatchCount() const;
 		size_t GetTrainBatchCount() const;
 		size_t GetTrainBatchCountHorizontal() const;
@@ -68,6 +70,8 @@ namespace en
 		cudaExternalSemaphore_t m_CudaFinishedSemaphore;
 
 		float m_Loss = 0.0f;
+		double m_InferenceTime = 0.0;
+		double m_TrainTime = 0.0;
 		size_t m_TrainCounter = 0;
 
 		void Inference(const uint32_t* inferFilter);

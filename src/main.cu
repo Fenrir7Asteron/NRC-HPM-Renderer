@@ -148,7 +148,9 @@ void Benchmark(const en::Camera* camera, VkQueue queue, size_t frameCount, Bench
 		std::to_string(nrcResult.mse) + " " +
 		std::to_string(nrcResult.GetRelBias()) + " " +
 		std::to_string(nrcResult.GetCV()) + " " + 
-		std::to_string(nrcHpmRenderer->GetLoss())
+		std::to_string(nrcHpmRenderer->GetLoss()) + " " +
+		std::to_string(nrcHpmRenderer->GetInferenceTime()) + " " +
+		std::to_string(nrcHpmRenderer->GetTrainTime())
 	);
 
 	logFileMc.WriteLine(

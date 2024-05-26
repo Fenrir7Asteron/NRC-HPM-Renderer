@@ -2,6 +2,7 @@
 #include <engine/graphics/NeuralRadianceCache.hpp>
 #include <random>
 #include <engine/util/Log.hpp>
+#include <__msvc_chrono.hpp>
 
 namespace en
 {
@@ -148,8 +149,21 @@ namespace en
 	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train)
 	{
 		AwaitCudaStartSemaphore();
+
+		auto start = std::chrono::steady_clock::now();
 		Inference(inferFilter);
-		if (train) { Train(trainFilter); }
+		auto end = std::chrono::steady_clock::now();
+		double elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
+		m_InferenceTime = elapsed_ms;
+
+		if (train) { 
+			auto start = std::chrono::steady_clock::now();
+			Train(trainFilter); 
+			auto end = std::chrono::steady_clock::now();
+			double elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
+			m_TrainTime = elapsed_ms;
+		}
+
 		SignalCudaFinishedSemaphore();
 	}
 
@@ -160,6 +174,16 @@ namespace en
 	float NeuralRadianceCache::GetLoss() const
 	{
 		return m_Loss;
+	}
+
+	float NeuralRadianceCache::GetInferenceTime() const
+	{
+		return m_InferenceTime;
+	}
+
+	float NeuralRadianceCache::GetTrainTime() const
+	{
+		return m_TrainTime;
 	}
 
 	size_t NeuralRadianceCache::GetInferBatchCount() const
