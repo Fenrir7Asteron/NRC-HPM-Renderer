@@ -37,6 +37,9 @@ namespace en
 		bool IsBlending() const;
 		float GetFrameTimeMS() const;
 		float GetLoss() const;
+		float GetInferenceTime() const;
+		float GetTrainTime() const;
+
 
 		void SetCamera(VkQueue queue, const Camera* camera);
 		void SetBlend(bool blend);
