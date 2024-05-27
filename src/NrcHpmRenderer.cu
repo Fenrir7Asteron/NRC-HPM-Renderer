@@ -263,7 +263,7 @@ namespace en
 		CreateSyncObjects(device);
 
 		CreateNrcBuffers();
-		m_Nrc.Init(
+		m_Nrc->Init(
 			m_RenderWidth, m_RenderHeight,
 			reinterpret_cast<float*>(m_NrcInferInputDCuBuffer),
 			reinterpret_cast<float*>(m_NrcInferOutputDCuBuffer),
@@ -343,7 +343,7 @@ namespace en
 		ASSERT_VULKAN(vkResetFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence));
 
 		// Cuda
-		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData),
+		m_Nrc->InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData),
 			reinterpret_cast<uint32_t*>(m_NrcTrainFilterData),
 			train);
 
@@ -596,12 +596,12 @@ namespace en
 
 	float NrcHpmRenderer::GetInferenceTime() const
 	{
-		return m_Nrc.GetInferenceTime();
+		return m_Nrc->GetInferenceTime();
 	}
 
 	float NrcHpmRenderer::GetTrainTime() const
 	{
-		return m_Nrc.GetTrainTime();
+		return m_Nrc->GetTrainTime();
 	}
 
 	void NrcHpmRenderer::SetCamera(VkQueue queue, const Camera* camera)
@@ -662,8 +662,8 @@ namespace en
 
 	void NrcHpmRenderer::CalcTrainSubset()
 	{
-		m_TrainWidth = m_Nrc.GetTrainBatchCountHorizontal() * m_Nrc.GetTrainBatchSizeHorizontal();
-		m_TrainHeight = m_Nrc.GetTrainBatchCountVertical() * m_Nrc.GetTrainBatchSizeVertical();
+		m_TrainWidth = m_Nrc->GetTrainBatchCountHorizontal() * m_Nrc->GetTrainBatchSizeHorizontal();
+		m_TrainHeight = m_Nrc->GetTrainBatchCountVertical() * m_Nrc->GetTrainBatchSizeVertical();
 
 		m_TrainXDist = ((float)m_RenderWidth) / m_TrainWidth;
 		m_TrainYDist = ((float)m_RenderHeight) / m_TrainHeight;
@@ -873,7 +873,7 @@ namespace en
 
 	void NrcHpmRenderer::CreateNrcTrainFilterBuffer()
 	{
-		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
+		size_t trainBatchCount = m_Nrc->GetTrainBatchCount();
 		m_NrcTrainFilterBufferSize = sizeof(uint32_t) * trainBatchCount;
 		m_NrcTrainFilterData = malloc(m_NrcTrainFilterBufferSize);
 
@@ -976,10 +976,10 @@ namespace en
 		m_SpecData.trainRingBufSize = m_TrainRingBufSize;
 		m_SpecData.trainRayLength = m_TrainRayLength;
 
-		m_SpecData.inferBatchSizeVertical = m_Nrc.GetInferBatchSizeVertical();
-		m_SpecData.inferBatchSizeHorizontal = m_Nrc.GetInferBatchSizeHorizontal();
-		m_SpecData.trainBatchSizeVertical = m_Nrc.GetTrainBatchSizeVertical();
-		m_SpecData.trainBatchSizeHorizontal = m_Nrc.GetTrainBatchSizeHorizontal();
+		m_SpecData.inferBatchSizeVertical = m_Nrc->GetInferBatchSizeVertical();
+		m_SpecData.inferBatchSizeHorizontal = m_Nrc->GetInferBatchSizeHorizontal();
+		m_SpecData.trainBatchSizeVertical = m_Nrc->GetTrainBatchSizeVertical();
+		m_SpecData.trainBatchSizeHorizontal = m_Nrc->GetTrainBatchSizeHorizontal();
 
 		m_SpecData.volumeSizeX = volumeSizeF.x;
 		m_SpecData.volumeSizeY = volumeSizeF.y;
