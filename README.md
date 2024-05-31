@@ -30,6 +30,8 @@ In the process of configuring vcpkg will download all dependencies from vcpkg.js
 `.\install-openvdb-<Target>.bat`
 8. Go back to VS, set root CMakeLists as startup item and build the project
 
+
+## Run
 Project can be run with default arguments with Visual Studio. \
 If you want to run it with different arguments through command line you can look up \
 default arguments at the bottom of `src/main.cu` file and meaning of arguments in the `include/engine/AppConfig.hpp`.
@@ -38,12 +40,15 @@ Built project files are in the `out/build/<build-target>` folder.
 
 Startup arguments may vary for different modifications in different branches.
 
+Project can be run in benchmark mode to store performance and quality metrics in the `out/build/<build-target>/output/` folder. In order to start project in the benchmark mode you need to set the respective startup argument to `1`.
+
+`OutputAnalysis/MetricPlotting.ipynb` notebook can be used to reproduce plots from my thesis using data received from benchmarking.
+
 ## Branches
 Different branches contain different modifications of the base NRC implementation:
 - `master` contains unmodified Jan Spindler's base NRC implementation
 - `train_filter_*` contain several train filtering options
 - `input_*` contains various options for additional input to neural network
 - `new_transmittance_estimator` contains implementation of unbiased and biased raymarching transmittance estimators from [this paper](https://developer.nvidia.com/blog/nvidia-research-an-unbiased-ray-marching-transmittance-estimator/)
-)
 - `combined` contains combination of modifications from `train_filter_adaptive`, `input_density` and `new_transmittance_estimator` branches
 - `approximate_mie` implements importance sampling by phase function from [this paper](https://research.nvidia.com/labs/rtr/approximate-mie/) but it is more noisy than Henyey-Greenstein so it is not used in the `combined` branch
