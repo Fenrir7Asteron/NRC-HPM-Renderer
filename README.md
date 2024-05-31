@@ -1,6 +1,6 @@
 ## About
 This repository is a fork of Jan Spindler's Neural Radiance Caching (NRC) implementation with two new modifications and 
-an experimental implementation of two transmittance estimation methods from the paper [An unbiased ray-marching transmittance estimator](https://doi.org/10.1145/3450626.3459937)
+an experimental implementation of two transmittance estimation methods from the paper [An unbiased ray-marching transmittance estimator](https://developer.nvidia.com/blog/nvidia-research-an-unbiased-ray-marching-transmittance-estimator/)
 
 First modification of NRC is adaptive train batch filtering. It splits input image into batches with a multi level uniform grid. Train batches that contained no scattering events are useless for the training and are excluded from the training. Multi level structure allows to join multiple batches into a single bigger batch to reduce training time.
 
@@ -43,6 +43,7 @@ Different branches contain different modifications of the base NRC implementatio
 - `master` contains unmodified Jan Spindler's base NRC implementation
 - `train_filter_*` contain several train filtering options
 - `input_*` contains various options for additional input to neural network
-- `new_transmittance_estimator` contains implementation of unbiased and biased raymarching transmittance estimators from [this paper]((https://doi.org/10.1145/3450626.3459937)
+- `new_transmittance_estimator` contains implementation of unbiased and biased raymarching transmittance estimators from [this paper](https://developer.nvidia.com/blog/nvidia-research-an-unbiased-ray-marching-transmittance-estimator/)
 )
 - `combined` contains combination of modifications from `train_filter_adaptive`, `input_density` and `new_transmittance_estimator` branches
+- `approximate_mie` implements importance sampling by phase function from [this paper](https://research.nvidia.com/labs/rtr/approximate-mie/) but it is more noisy than Henyey-Greenstein so it is not used in the `combined` branch
