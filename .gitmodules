@@ -1,8 +1,8 @@
 [submodule "tiny-cuda-nn"]
 	path = tiny-cuda-nn
 	url = https://github.com/NVlabs/tiny-cuda-nn.git
-	branch = v1.6
+	branch = master
 [submodule "openvdb"]
 	path = openvdb
 	url = https://github.com/AcademySoftwareFoundation/openvdb.git
-	branch = v10.0.0
+	branch = master
