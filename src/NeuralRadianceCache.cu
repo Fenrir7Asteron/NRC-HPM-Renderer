@@ -96,7 +96,7 @@ namespace en
 		en::Log::Info("Train batch count: " + std::to_string(m_TrainBatchCount));
 	}
 
-	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train)
+	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train, glm::vec4* nrcTrainBatchesColors)
 	{
 		AwaitCudaStartSemaphore();
 
@@ -108,7 +108,7 @@ namespace en
 
 		if (train) { 
 			auto start = std::chrono::steady_clock::now();
-			Train(trainFilter, trainFilteredFrameCounter);
+			Train(trainFilter, trainFilteredFrameCounter, nrcTrainBatchesColors);
 			auto end = std::chrono::steady_clock::now();
 			double elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
 			m_TrainTime = elapsed_ms;
@@ -169,9 +169,16 @@ namespace en
 		}
 	}
 
-	void NeuralRadianceCache::Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter)
+	void NeuralRadianceCache::Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, glm::vec4* nrcTrainBatchesColors)
 	{
-		for (size_t i = 0; i < m_TrainInputBatches.size(); i++)
+		const size_t trainBatchCount = GetTrainBatchCount();
+
+		for (size_t i = 0; i < trainBatchCount; i++)
+		{
+			nrcTrainBatchesColors[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
+		}
+
+		for (size_t i = 0; i < trainBatchCount; i++)
 		{
 			if (trainFilter[i] <= 0)
 			{
@@ -180,6 +187,7 @@ namespace en
 			else
 			{
 				trainFilteredFrameCounter[i] = 0;
+				nrcTrainBatchesColors[i] = { 1.0f, 0.0f, 0.0f, 1.0f };
 			}
 
 			// Exclude batch from training if it filtered more than sc_FilterFrameCountThreshold times

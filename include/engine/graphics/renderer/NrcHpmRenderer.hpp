@@ -53,8 +53,8 @@ namespace en
 			uint32_t renderHeight;
 			uint32_t trainWidth;
 			uint32_t trainHeight;
-			uint32_t trainXDist;
-			uint32_t trainYDist;
+			float trainXDist;
+			float trainYDist;
 			uint32_t trainSpp;
 			uint32_t primaryRayLength;
 			float primaryRayProb;
@@ -87,8 +87,8 @@ namespace en
 		uint32_t m_RenderHeight = 0;
 		uint32_t m_TrainWidth = 0;
 		uint32_t m_TrainHeight = 0;
-		uint32_t m_TrainXDist = 0;
-		uint32_t m_TrainYDist = 0;
+		float m_TrainXDist = 0;
+		float m_TrainYDist = 0;
 		uint32_t m_TrainSpp = 0;
 		uint32_t m_PrimaryRayLength = 0;
 		float m_PrimaryRayProb = 0.0f;
@@ -141,6 +141,11 @@ namespace en
 		uint32_t* m_NrcTrainFilteredFrameCounter = nullptr;
 		vk::Buffer* m_NrcTrainFilterStagingBuffer = nullptr;
 		vk::Buffer* m_NrcTrainFilterBuffer = nullptr;
+
+		VkDeviceSize m_NrcTrainBatchesColorsBufferSize = 0;
+		glm::vec4* m_NrcTrainBatchesColorsData = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsStagingBuffer = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsBuffer = nullptr;
 
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
@@ -209,6 +214,7 @@ namespace en
 		void CreateNrcBuffers();
 		void CreateNrcInferFilterBuffer();
 		void CreateNrcTrainFilterBuffer();
+		void CreateNrcTrainBatchesColorsBuffer();
 		void CreateNrcTrainRingBuffer();
 
 		void CreatePipelineLayout(VkDevice device);

@@ -99,7 +99,7 @@ void main()
 	const uint x = gl_GlobalInvocationID.x;
 	const uint y = gl_GlobalInvocationID.y;
 	const ivec2 trainImageCoord = ivec2(x, y);
-	const ivec2 renderImageCoord = trainImageCoord * ivec2(TRAIN_X_DIST, TRAIN_Y_DIST);
+	const ivec2 renderImageCoord = ivec2(float(trainImageCoord.x) * TRAIN_X_DIST, float(trainImageCoord.y) * TRAIN_Y_DIST);
 	const vec2 fragUV = vec2(float(x) * ONE_OVER_RENDER_WIDTH, float(y) * ONE_OVER_RENDER_HEIGHT);
 
 	// Setup random
@@ -127,6 +127,11 @@ void main()
 
 	// Calc index
 	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+	const uint linearBatchIndex = linearPixelIndex / TRAIN_BATCH_SIZE;
+
+	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+	primaryRayColor += batchColors[linearBatchIndex];
+	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
 
 	// Store train data
 	if (TRAIN_RING_BUF_SIZE > 0)
@@ -137,7 +142,6 @@ void main()
 	// Increment batch valid sample counter
 	if (didScatter)
 	{
-		const uint linearBatchIndex = linearPixelIndex / TRAIN_BATCH_SIZE;
 		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
 	}
 }

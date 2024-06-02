@@ -144,6 +144,13 @@ namespace en
 		nrcTrainFilterBufferBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 		nrcTrainFilterBufferBinding.pImmutableSamplers = nullptr;
 
+		VkDescriptorSetLayoutBinding nrcTrainBatchesColorsBufferBinding;
+		nrcTrainBatchesColorsBufferBinding.binding = bindingIndex++;
+		nrcTrainBatchesColorsBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		nrcTrainBatchesColorsBufferBinding.descriptorCount = 1;
+		nrcTrainBatchesColorsBufferBinding.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+		nrcTrainBatchesColorsBufferBinding.pImmutableSamplers = nullptr;
+
 		VkDescriptorSetLayoutBinding nrcTrainRingBufferBinding;
 		nrcTrainRingBufferBinding.binding = bindingIndex++;
 		nrcTrainRingBufferBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -170,6 +177,7 @@ namespace en
 			nrcTrainTargetBufferBinding,
 			nrcInferFilterBufferBinding,
 			nrcTrainFilterBufferBinding,
+			nrcTrainBatchesColorsBufferBinding,
 			nrcTrainRingBufferBinding,
 			uniformBufferBinding
 		};
@@ -191,7 +199,7 @@ namespace en
 
 		VkDescriptorPoolSize storageBufferPS;
 		storageBufferPS.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-		storageBufferPS.descriptorCount = 7;
+		storageBufferPS.descriptorCount = 8;
 
 		VkDescriptorPoolSize uniformBufferPS;
 		uniformBufferPS.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -274,6 +282,7 @@ namespace en
 			m_CuExtCudaFinishedSemaphore);
 		CreateNrcInferFilterBuffer();
 		CreateNrcTrainFilterBuffer();
+		CreateNrcTrainBatchesColorsBuffer();
 		CreateNrcTrainRingBuffer();
 
 		m_CommandPool.AllocateBuffers(3, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -341,13 +350,16 @@ namespace en
 		ASSERT_VULKAN(vkWaitForFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence, VK_TRUE, UINT64_MAX));
 		m_NrcInferFilterStagingBuffer->GetData(m_NrcInferFilterBufferSize, m_NrcInferFilterData, 0, 0);
 		m_NrcTrainFilterStagingBuffer->GetData(m_NrcTrainFilterBufferSize, m_NrcTrainFilterData, 0, 0);
+
+		m_NrcTrainBatchesColorsStagingBuffer->SetData(m_NrcTrainBatchesColorsBufferSize, m_NrcTrainBatchesColorsData, 0, 0);
 		ASSERT_VULKAN(vkResetFences(VulkanAPI::GetDevice(), 1, &m_PreCudaFence));
 
 		// Cuda
 		m_Nrc.InferAndTrain(reinterpret_cast<uint32_t*>(m_NrcInferFilterData),
 			reinterpret_cast<uint32_t*>(m_NrcTrainFilterData),
 			m_NrcTrainFilteredFrameCounter,
-			train);
+			train,
+			m_NrcTrainBatchesColorsData);
 
 		// Post cuda
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -427,6 +439,12 @@ namespace en
 		delete m_NrcTrainFilterStagingBuffer;
 		delete m_NrcTrainFilterData;
 		delete m_NrcTrainFilteredFrameCounter;
+
+		m_NrcTrainBatchesColorsBuffer->Destroy();
+		delete m_NrcTrainBatchesColorsBuffer;
+		m_NrcTrainBatchesColorsStagingBuffer->Destroy();
+		delete m_NrcTrainBatchesColorsStagingBuffer;
+		delete m_NrcTrainBatchesColorsData;
 
 		m_NrcTrainTargetBuffer->Destroy();
 		delete m_NrcTrainTargetBuffer;
@@ -672,10 +690,14 @@ namespace en
 					m_TrainHeight = biggerFactor;
 				}
 
-				m_TrainXDist = m_RenderWidth / m_TrainWidth;
-				m_TrainYDist = m_RenderHeight / m_TrainHeight;
+				m_TrainXDist = ((float) m_RenderWidth) / m_TrainWidth;
+				m_TrainYDist = ((float) m_RenderHeight) / m_TrainHeight;
 
-				en::Log::Warn("Train pixel count: " + std::to_string(trainPixelCount) + ", m_TrainXDist: " + std::to_string(m_TrainXDist) + ", m_TrainYDist: " + std::to_string(m_TrainYDist));
+				en::Log::Warn("Train pixel count: " + std::to_string(trainPixelCount) 
+					+ ", m_TrainWidth: " + std::to_string(m_TrainWidth)
+					+ ", m_TrainHeight: " + std::to_string(m_TrainHeight)
+					+ ", m_TrainXDist: " + std::to_string(m_TrainXDist) 
+					+ ", m_TrainYDist: " + std::to_string(m_TrainYDist));
 
 				return;
 			}
@@ -905,6 +927,26 @@ namespace en
 			{});
 	}
 
+	void NrcHpmRenderer::CreateNrcTrainBatchesColorsBuffer()
+	{
+		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
+		m_NrcTrainBatchesColorsBufferSize = sizeof(glm::vec4) * trainBatchCount;
+		en::Log::Info("Size of colors buffer: " + std::to_string(m_NrcTrainBatchesColorsBufferSize));
+		m_NrcTrainBatchesColorsData = (glm::vec4*)malloc(m_NrcTrainBatchesColorsBufferSize);
+
+		m_NrcTrainBatchesColorsStagingBuffer = new vk::Buffer(
+			m_NrcTrainBatchesColorsBufferSize,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			{});
+
+		m_NrcTrainBatchesColorsBuffer = new vk::Buffer(
+			m_NrcTrainBatchesColorsBufferSize,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			{});
+	}
+
 	void NrcHpmRenderer::CreateNrcTrainRingBuffer()
 	{
 		const VkDeviceSize headAndTailSize = 2 * sizeof(uint32_t);
@@ -1032,7 +1074,7 @@ namespace en
 
 		VkSpecializationMapEntry trainYDistEntry{};
 		trainYDistEntry.constantID = constantID++;
-		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainXDist);
+		trainYDistEntry.offset = offsetof(SpecializationData, SpecializationData::trainYDist);
 		trainYDistEntry.size = sizeof(uint32_t);
 
 		VkSpecializationMapEntry trainSppEntry;
@@ -1977,6 +2019,23 @@ namespace en
 		nrcTrainFilterBufferWrite.pBufferInfo = &nrcTrainFilterBufferInfo;
 		nrcTrainFilterBufferWrite.pTexelBufferView = nullptr;
 
+		VkDescriptorBufferInfo nrcTrainBatchesColorsBufferInfo;
+		nrcTrainBatchesColorsBufferInfo.buffer = m_NrcTrainBatchesColorsBuffer->GetVulkanHandle();
+		nrcTrainBatchesColorsBufferInfo.offset = 0;
+		nrcTrainBatchesColorsBufferInfo.range = m_NrcTrainBatchesColorsBufferSize;
+
+		VkWriteDescriptorSet nrcTrainBatchesColorsBufferWrite;
+		nrcTrainBatchesColorsBufferWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		nrcTrainBatchesColorsBufferWrite.pNext = nullptr;
+		nrcTrainBatchesColorsBufferWrite.dstSet = m_DescSet;
+		nrcTrainBatchesColorsBufferWrite.dstBinding = bindingIndex++;
+		nrcTrainBatchesColorsBufferWrite.dstArrayElement = 0;
+		nrcTrainBatchesColorsBufferWrite.descriptorCount = 1;
+		nrcTrainBatchesColorsBufferWrite.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+		nrcTrainBatchesColorsBufferWrite.pImageInfo = nullptr;
+		nrcTrainBatchesColorsBufferWrite.pBufferInfo = &nrcTrainBatchesColorsBufferInfo;
+		nrcTrainBatchesColorsBufferWrite.pTexelBufferView = nullptr;
+
 		VkDescriptorBufferInfo nrcTrainRingBufferInfo;
 		nrcTrainRingBufferInfo.buffer = m_NrcTrainRingBuffer->GetVulkanHandle();
 		nrcTrainRingBufferInfo.offset = 0;
@@ -2025,6 +2084,7 @@ namespace en
 			nrcTrainTargetBufferWrite,
 			nrcInferFilterBufferWrite,
 			nrcTrainFilterBufferWrite,
+			nrcTrainBatchesColorsBufferWrite,
 			nrcTrainRingBufferWrite,
 			uniformBufferWrite
 		};
@@ -2117,6 +2177,18 @@ namespace en
 			m_NrcInferFilterStagingBuffer->GetVulkanHandle(), 
 			1, 
 			&nrcInferFilterCopy);
+
+		// Copy nrc train batches colors buffer to device
+		VkBufferCopy nrcTrainBatchesColorsCopy;
+		nrcTrainBatchesColorsCopy.srcOffset = 0;
+		nrcTrainBatchesColorsCopy.dstOffset = 0;
+		nrcTrainBatchesColorsCopy.size = m_NrcTrainBatchesColorsBufferSize;
+		vkCmdCopyBuffer(
+			m_PreCudaCommandBuffer,
+			m_NrcTrainBatchesColorsStagingBuffer->GetVulkanHandle(),
+			m_NrcTrainBatchesColorsBuffer->GetVulkanHandle(),
+			1,
+			&nrcTrainBatchesColorsCopy);
 
 		// Timestamp
 		vkCmdWriteTimestamp(m_PreCudaCommandBuffer, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, m_QueryPool, m_QueryIndex++);

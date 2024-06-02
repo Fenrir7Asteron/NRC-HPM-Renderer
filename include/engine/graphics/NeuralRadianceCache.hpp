@@ -21,7 +21,8 @@ namespace en
 			cudaExternalSemaphore_t cudaStartSemaphore,
 			cudaExternalSemaphore_t cudaFinishedSemaphore);
 
-		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train);
+		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, bool train, 
+			glm::vec4* nrcTrainBatchesColors);
 
 		void Destroy();
 
@@ -64,7 +65,7 @@ namespace en
 		size_t m_TrainCounter = 0;
 
 		void Inference(const uint32_t* inferFilter);
-		void Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter);
+		void Train(const uint32_t* trainFilter, uint32_t* trainFilteredFrameCounter, glm::vec4* nrcTrainBatchesColors);
 		void AwaitCudaStartSemaphore();
 		void SignalCudaFinishedSemaphore();
 	};
