@@ -143,6 +143,12 @@ namespace en
 		vk::Buffer* m_NrcTrainFilterStagingBuffer = nullptr;
 		vk::Buffer* m_NrcTrainFilterBuffer = nullptr;
 
+		VkDeviceSize m_NrcTrainBatchesColorsBufferSize = 0;
+		glm::vec4* m_NrcTrainBatchesColorsData = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsStagingBuffer = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsBuffer = nullptr;
+
+
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
 
@@ -218,6 +224,7 @@ namespace en
 		void CreateNrcBuffers();
 		void CreateNrcInferFilterBuffer();
 		void CreateNrcTrainFilterBuffer();
+		void CreateNrcTrainBatchesColorsBuffer();
 		void CreateNrcTrainRingBuffer();
 
 		void CreatePipelineLayout(VkDevice device);

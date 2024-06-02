@@ -146,7 +146,8 @@ namespace en
 		en::Log::Info("Train batch size (V:" + std::to_string(m_TrainBatchSizeVertical) + ", H:" + std::to_string(m_TrainBatchSizeHorizontal) + ")");
 	}
 
-	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train)
+	void NeuralRadianceCache::InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train, 
+		glm::vec4* nrcTrainBatchesColors)
 	{
 		AwaitCudaStartSemaphore();
 
@@ -158,7 +159,7 @@ namespace en
 
 		if (train) { 
 			auto start = std::chrono::steady_clock::now();
-			Train(trainFilter); 
+			Train(trainFilter, nrcTrainBatchesColors);
 			auto end = std::chrono::steady_clock::now();
 			double elapsed_ms = std::chrono::duration_cast<std::chrono::duration<double>>(end - start).count() * 1000.0;
 			m_TrainTime = elapsed_ms;
@@ -244,15 +245,46 @@ namespace en
 		}
 	}
 
-	void NeuralRadianceCache::Train(const uint32_t* trainFilter)
+	void NeuralRadianceCache::Train(const uint32_t* trainFilter, glm::vec4* nrcTrainBatchesColors)
 	{
+		const size_t trainBatchCount = GetTrainBatchCount();
+		en::Log::Info("Train filter value list");
+		for (size_t i = 0; i < trainBatchCount; i++)
+		{
+			nrcTrainBatchesColors[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			en::Log::Info("Train filter value: " + std::to_string(trainFilter[i]));
+		}
+
 		std::vector<std::pair<uint32_t, uint32_t>> batchesToTrain;
 		GetBatchesToTrain(m_TrainMaxBatchLevel, 0, 1 << (m_TrainMaxBatchLevel * 2), trainFilter, batchesToTrain);
+
+		en::Log::Info("batchesToTrain size: " + std::to_string(batchesToTrain.size()));
 
 		for (size_t i = 0; i < batchesToTrain.size(); i++)
 		{
 			const uint32_t batchLevel = batchesToTrain[i].first;
 			const uint32_t batchIdx = batchesToTrain[i].second;
+
+			en::Log::Info("Level: " + std::to_string(batchLevel) + " BatchIdx: " + std::to_string(batchIdx));
+
+			const uint32_t batchSize = 1 << (batchLevel * 2);
+			const uint32_t leafBatchMinIdx = batchSize * batchIdx;
+			const uint32_t leafBatchMaxIdx = batchSize * (batchIdx + 1);
+			for (int j = leafBatchMinIdx; j < leafBatchMaxIdx; ++j)
+			{
+				if (batchLevel == m_TrainMaxBatchLevel)
+				{
+					nrcTrainBatchesColors[j] = { 0.0f, 0.0f, 1.0f, 1.0f };
+				}
+				else if (batchLevel == m_TrainMaxBatchLevel - 1)
+				{
+					nrcTrainBatchesColors[j] = { 0.0f, 1.0f, 0.0f, 1.0f };
+				}
+				else
+				{
+					nrcTrainBatchesColors[j] = { 1.0f, 0.0f, 0.0f, 1.0f };
+				}
+			}
 
 			const tcnn::GPUMatrix<float>& inputBatch = m_TrainInputBatches[batchLevel][batchIdx];
 			const tcnn::GPUMatrix<float>& targetBatch = m_TrainTargetBatches[batchLevel][batchIdx];
@@ -279,6 +311,7 @@ namespace en
 		bool p3 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx + size * 2, minBatchIdx + size * 3, trainFilter, batchesToTrain);
 		bool p4 = GetBatchesToTrain(currentBatchLevel - 1, minBatchIdx + size * 3, minBatchIdx + size * 4, trainFilter, batchesToTrain);
 		bool isAllChildPositive = p1 && p2 && p3 && p4;
+
 		if (isAllChildPositive)
 		{
 			// If all subbatches are positive we can join them all in a single root batch
@@ -291,7 +324,19 @@ namespace en
 		}
 
 		const uint32_t childBatchLevel = currentBatchLevel - 1;
-		const uint32_t childLevelSize = 1 << ((m_TrainMaxBatchLevel - childBatchLevel) * 2);
+		const uint32_t childLevelSize = 1 << (childBatchLevel * 2);
+
+		en::Log::Info("Level: " + std::to_string(currentBatchLevel)
+			+ " p1: " + std::to_string(p1)
+			+ " p2: " + std::to_string(p2)
+			+ " p3: " + std::to_string(p3)
+			+ " p4: " + std::to_string(p4)
+			+ " minBatchIdx: " + std::to_string(minBatchIdx)
+			+ " maxBatchIdx: " + std::to_string(maxBatchIdx)
+			+ " size: " + std::to_string(size)
+			+ " childLevelSize: " + std::to_string(childLevelSize)
+		);
+
 		if (p1)
 		{
 			const uint32_t currentBatchIdx = (minBatchIdx)/ childLevelSize;
@@ -300,19 +345,19 @@ namespace en
 
 		if (p2)
 		{
-			const uint32_t currentBatchIdx = (minBatchIdx + size) / childLevelSize;
+			const uint32_t currentBatchIdx = (minBatchIdx) / childLevelSize + 1;
 			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
 		}
 
 		if (p3)
 		{
-			const uint32_t currentBatchIdx = (minBatchIdx + size * 2) / childLevelSize;
+			const uint32_t currentBatchIdx = (minBatchIdx) / childLevelSize + 2;
 			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
 		}
 
 		if (p4)
 		{
-			const uint32_t currentBatchIdx = (minBatchIdx + size * 3) / childLevelSize;
+			const uint32_t currentBatchIdx = (minBatchIdx) / childLevelSize + 3;
 			batchesToTrain.push_back({ childBatchLevel, currentBatchIdx });
 		}
 
