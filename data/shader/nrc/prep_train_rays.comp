@@ -126,7 +126,7 @@ void main()
 	target /= float(TRAIN_SPP);
 
 	// Calc index
-	const uint linearPixelIndex = (y * TRAIN_WIDTH) + x;
+	const uint linearPixelIndex = (x * TRAIN_WIDTH) + y;
 	const uint linearBatchIndex = linearPixelIndex / TRAIN_BATCH_SIZE;
 
 	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
