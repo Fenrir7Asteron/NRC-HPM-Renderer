@@ -248,24 +248,18 @@ namespace en
 	void NeuralRadianceCache::Train(const uint32_t* trainFilter, glm::vec4* nrcTrainBatchesColors)
 	{
 		const size_t trainBatchCount = GetTrainBatchCount();
-		en::Log::Info("Train filter value list");
 		for (size_t i = 0; i < trainBatchCount; i++)
 		{
 			nrcTrainBatchesColors[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			en::Log::Info("Train filter value: " + std::to_string(trainFilter[i]));
 		}
 
 		std::vector<std::pair<uint32_t, uint32_t>> batchesToTrain;
 		GetBatchesToTrain(m_TrainMaxBatchLevel, 0, 1 << (m_TrainMaxBatchLevel * 2), trainFilter, batchesToTrain);
 
-		en::Log::Info("batchesToTrain size: " + std::to_string(batchesToTrain.size()));
-
 		for (size_t i = 0; i < batchesToTrain.size(); i++)
 		{
 			const uint32_t batchLevel = batchesToTrain[i].first;
 			const uint32_t batchIdx = batchesToTrain[i].second;
-
-			en::Log::Info("Level: " + std::to_string(batchLevel) + " BatchIdx: " + std::to_string(batchIdx));
 
 			const uint32_t batchSize = 1 << (batchLevel * 2);
 			const uint32_t leafBatchMinIdx = batchSize * batchIdx;
@@ -325,17 +319,6 @@ namespace en
 
 		const uint32_t childBatchLevel = currentBatchLevel - 1;
 		const uint32_t childLevelSize = 1 << (childBatchLevel * 2);
-
-		en::Log::Info("Level: " + std::to_string(currentBatchLevel)
-			+ " p1: " + std::to_string(p1)
-			+ " p2: " + std::to_string(p2)
-			+ " p3: " + std::to_string(p3)
-			+ " p4: " + std::to_string(p4)
-			+ " minBatchIdx: " + std::to_string(minBatchIdx)
-			+ " maxBatchIdx: " + std::to_string(maxBatchIdx)
-			+ " size: " + std::to_string(size)
-			+ " childLevelSize: " + std::to_string(childLevelSize)
-		);
 
 		if (p1)
 		{

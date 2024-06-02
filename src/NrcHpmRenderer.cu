@@ -907,7 +907,6 @@ namespace en
 	{
 		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
 		m_NrcTrainBatchesColorsBufferSize = sizeof(glm::vec4) * trainBatchCount;
-		en::Log::Info("Size of colors buffer: " + std::to_string(m_NrcTrainBatchesColorsBufferSize));
 		m_NrcTrainBatchesColorsData = (glm::vec4*) malloc(m_NrcTrainBatchesColorsBufferSize);
 
 		m_NrcTrainBatchesColorsStagingBuffer = new vk::Buffer(

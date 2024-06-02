@@ -180,8 +180,6 @@ void main()
 			minY = middleY;
 		}
 	}
-//	const uint linearBatchIndex = y / TRAIN_BATCH_SIZE_VERTICAL * trainBatchCountHorizontal 
-//									+ x / TRAIN_BATCH_SIZE_HORIZONTAL;
 
 	const uint linearBatchIndex = minBatchIdx;
 
