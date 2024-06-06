@@ -118,4 +118,5 @@ layout(set = 5, binding = 13) uniform Renderer
 	vec4 random;
 	uint showNrc;
 	float blendFactor;
+	uint enableTrainFilterDebug;
 };

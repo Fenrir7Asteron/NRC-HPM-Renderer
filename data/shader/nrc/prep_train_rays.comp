@@ -183,9 +183,12 @@ void main()
 
 	const uint linearBatchIndex = minBatchIdx;
 
-	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
-	primaryRayColor += batchColors[linearBatchIndex];
-	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+	if (enableTrainFilterDebug == 1)
+	{
+		vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+		primaryRayColor += batchColors[linearBatchIndex];
+		imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+	}
 
 //	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
 //	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
