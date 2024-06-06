@@ -911,7 +911,7 @@ namespace en
 
 	void NrcHpmRenderer::CreateNrcTrainBatchesColorsBuffer()
 	{
-		size_t trainBatchCount = m_Nrc.GetTrainBatchCount();
+		size_t trainBatchCount = m_Nrc->GetTrainBatchCount();
 		m_NrcTrainBatchesColorsBufferSize = sizeof(glm::vec4) * trainBatchCount;
 		m_NrcTrainBatchesColorsData = (glm::vec4*) malloc(m_NrcTrainBatchesColorsBufferSize);
 
