@@ -22,7 +22,7 @@ namespace en
 			cudaExternalSemaphore_t cudaStartSemaphore,
 			cudaExternalSemaphore_t cudaFinishedSemaphore);
 
-		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train);
+		void InferAndTrain(const uint32_t* inferFilter, const uint32_t* trainFilter, bool train, glm::vec4* nrcTrainBatchesColors);
 
 		void Destroy();
 
@@ -75,7 +75,7 @@ namespace en
 		size_t m_TrainCounter = 0;
 
 		void Inference(const uint32_t* inferFilter);
-		void Train(const uint32_t* trainFilter);
+		void Train(const uint32_t* trainFilter, glm::vec4* nrcTrainBatchesColors);
 		bool GetBatchesToTrain(const int32_t currentBatchLevel, const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter, std::vector<std::pair<uint32_t, uint32_t>>& batchesToTrain);
 		bool IsBatchFilterPositive(const uint32_t minBatchIdx, const uint32_t maxBatchIdx, const uint32_t* trainFilter);
 		void AwaitCudaStartSemaphore();

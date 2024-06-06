@@ -91,6 +91,11 @@ layout(std430, set = 5, binding = 10) buffer NrcTrainFilter
 	uint nrcTrainFilter[];
 };
 
+layout(std430, set = 5, binding = 11) buffer NrcTrainBatchesColors
+{
+	vec4 batchColors[];
+};
+
 struct RayInfo
 {
 	float posX;
@@ -102,16 +107,17 @@ struct RayInfo
 	float dirZ;
 };
 
-layout(std430, set = 5, binding = 11) buffer NrcTrainRing
+layout(std430, set = 5, binding = 12) buffer NrcTrainRing
 {
 	uint nrcTrainRingHead;
 	uint nrcTrainRingTail;
 	RayInfo nrcTrainRingBuffer[];
 };
 
-layout(set = 5, binding = 12) uniform Renderer
+layout(set = 5, binding = 13) uniform Renderer
 {
 	vec4 random;
 	uint showNrc;
 	float blendFactor;
+	uint enableTrainFilterDebug;
 };

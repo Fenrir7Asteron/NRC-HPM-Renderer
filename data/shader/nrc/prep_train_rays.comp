@@ -139,6 +139,62 @@ void main()
 	const uint linearPixelIndexScaledToRender = GetTrainLinearPixelIndex(renderImageCoord.x, renderImageCoord.y, RENDER_WIDTH, RENDER_HEIGHT,
 		uint(float(TRAIN_BATCH_SIZE_HORIZONTAL) * TRAIN_X_DIST), uint(float(TRAIN_BATCH_SIZE_VERTICAL) * TRAIN_Y_DIST));
 
+	const uint levelCount = uint(log2(float(TRAIN_WIDTH) / float(TRAIN_BATCH_SIZE_HORIZONTAL)));
+	const uint trainBatchCountHorizontal = TRAIN_WIDTH / TRAIN_BATCH_SIZE_HORIZONTAL;
+	const uint trainBatchCountVertical = TRAIN_HEIGHT / TRAIN_BATCH_SIZE_VERTICAL;
+
+	uint minBatchIdx = 0;
+	uint maxBatchIdx = trainBatchCountHorizontal * trainBatchCountVertical;
+	uint minX = 0;
+	uint maxX = TRAIN_WIDTH;
+	uint minY = 0;
+	uint maxY = TRAIN_HEIGHT;
+
+	for (int i = int(levelCount); i > 0; --i)
+	{
+		const uint size = (maxBatchIdx - minBatchIdx) / 4;
+
+		const uint middleX = minX + (maxX - minX) / 2;
+		const uint middleY = minY + (maxY - minY) / 2;
+
+		if (x < middleX && y < middleY)
+		{
+			maxBatchIdx = minBatchIdx + size;	
+			maxX = middleX;
+			maxY = middleY;
+		}
+		else if (x >= middleX && y < middleY)
+		{
+			maxBatchIdx = minBatchIdx + size * 2;
+			minBatchIdx = minBatchIdx + size;		
+			minX = middleX;
+			maxY = middleY;
+		}
+		else if (x < middleX && y >= middleY)
+		{
+			maxBatchIdx = minBatchIdx + size * 3;
+			minBatchIdx = minBatchIdx + size * 2;		
+			maxX = middleX;
+			minY = middleY;
+		}
+		else
+		{
+			maxBatchIdx = minBatchIdx + size * 4;
+			minBatchIdx = minBatchIdx + size * 3;		
+			minX = middleX;
+			minY = middleY;
+		}
+	}
+
+	const uint linearBatchIndex = minBatchIdx;
+
+	if (enableTrainFilterDebug == 1)
+	{
+		vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
+		primaryRayColor += batchColors[linearBatchIndex];
+		imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
+	}
+
 //	vec4 primaryRayColor = imageLoad(primaryRayColorImage, renderImageCoord);
 //	primaryRayColor.r += sqrt(float(linearPixelIndexScaledToRender)) / sqrt(float(RENDER_WIDTH * RENDER_HEIGHT));
 //	imageStore(primaryRayColorImage, renderImageCoord, primaryRayColor);
@@ -156,9 +212,6 @@ void main()
 	// Increment batch valid sample counter
 	if (didScatter)
 	{
-		const uint trainBatchCountHorizontal = TRAIN_WIDTH / TRAIN_BATCH_SIZE_HORIZONTAL;
-		const uint linearBatchIndex = y / TRAIN_BATCH_SIZE_VERTICAL * trainBatchCountHorizontal 
-									+ x / TRAIN_BATCH_SIZE_HORIZONTAL;
 		if (nrcTrainFilter[linearBatchIndex] == 0) { atomicAdd(nrcTrainFilter[linearBatchIndex], 1); }
 	}
 }

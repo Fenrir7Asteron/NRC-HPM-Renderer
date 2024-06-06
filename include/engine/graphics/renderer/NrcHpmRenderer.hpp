@@ -13,6 +13,8 @@ namespace en
 	class NrcHpmRenderer
 	{
 	public:
+		bool trainFilterDebugEnabled = false;
+
 		static void Init(VkDevice device);
 		static void Shutdown(VkDevice device);
 
@@ -74,6 +76,8 @@ namespace en
 			float volumeG;
 
 			float hdrEnvMapStrength;
+
+			bool trainFilterDebug;
 		};
 
 		struct UniformData
@@ -81,6 +85,7 @@ namespace en
 			glm::vec4 random;
 			uint32_t showNrc;
 			float blendFactor;
+			uint32_t enableTrainFilterDebug;
 		};
 
 		static VkDescriptorSetLayout m_DescSetLayout;
@@ -143,6 +148,12 @@ namespace en
 		void* m_NrcTrainFilterData = nullptr;
 		vk::Buffer* m_NrcTrainFilterStagingBuffer = nullptr;
 		vk::Buffer* m_NrcTrainFilterBuffer = nullptr;
+
+		VkDeviceSize m_NrcTrainBatchesColorsBufferSize = 0;
+		glm::vec4* m_NrcTrainBatchesColorsData = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsStagingBuffer = nullptr;
+		vk::Buffer* m_NrcTrainBatchesColorsBuffer = nullptr;
+
 
 		VkDeviceSize m_NrcTrainRingBufferSize = 0;
 		vk::Buffer* m_NrcTrainRingBuffer;
@@ -219,6 +230,7 @@ namespace en
 		void CreateNrcBuffers();
 		void CreateNrcInferFilterBuffer();
 		void CreateNrcTrainFilterBuffer();
+		void CreateNrcTrainBatchesColorsBuffer();
 		void CreateNrcTrainRingBuffer();
 
 		void CreatePipelineLayout(VkDevice device);
