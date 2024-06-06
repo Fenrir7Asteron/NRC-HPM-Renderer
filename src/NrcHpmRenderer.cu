@@ -569,6 +569,7 @@ namespace en
 		ImGui::Text("Theoretical FPS %f", 1000.0f / m_TimePeriods[c_QueryCount - 1]);
 
 		ImGui::Checkbox("Show NRC", reinterpret_cast<bool*>(&m_UniformData.showNrc));
+		ImGui::Checkbox("Train filter debug", reinterpret_cast<bool*>(&m_UniformData.enableTrainFilterDebug));
 
 		ImGui::Checkbox("Blend", &m_ShouldBlend);
 		ImGui::Text("Blend index %u", m_BlendIndex);
@@ -1044,6 +1045,8 @@ namespace en
 
 		m_SpecData.hdrEnvMapStrength = m_HpmScene.GetHdrEnvMap()->GetStrength();
 
+		m_SpecData.trainFilterDebug = trainFilterDebugEnabled;
+
 		// Init map entries
 		uint32_t constantID = 0;
 
@@ -1142,6 +1145,11 @@ namespace en
 		hdrEnvMapStrengthEntry.offset = offsetof(SpecializationData, SpecializationData::hdrEnvMapStrength);
 		hdrEnvMapStrengthEntry.size = sizeof(float);
 
+		VkSpecializationMapEntry enableFilteringDebugEntry;
+		enableFilteringDebugEntry.constantID = constantID++;
+		enableFilteringDebugEntry.offset = offsetof(SpecializationData, SpecializationData::trainFilterDebug);
+		enableFilteringDebugEntry.size = sizeof(bool);
+
 		m_SpecMapEntries = {
 			renderWidthEntry,
 			renderHeightEntry,
@@ -1160,7 +1168,8 @@ namespace en
 			volumeSizeZEntry,
 			volumeDensityFactorEntry,
 			volumeGEntry,
-			hdrEnvMapStrengthEntry
+			hdrEnvMapStrengthEntry,
+			enableFilteringDebugEntry
 		};
 
 		m_SpecInfo.mapEntryCount = m_SpecMapEntries.size();

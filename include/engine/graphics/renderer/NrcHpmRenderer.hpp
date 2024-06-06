@@ -13,6 +13,8 @@ namespace en
 	class NrcHpmRenderer
 	{
 	public:
+		bool trainFilterDebugEnabled = false;
+
 		static void Init(VkDevice device);
 		static void Shutdown(VkDevice device);
 
@@ -71,6 +73,8 @@ namespace en
 			float volumeG;
 
 			float hdrEnvMapStrength;
+
+			bool trainFilterDebug;
 		};
 
 		struct UniformData
@@ -78,6 +82,7 @@ namespace en
 			glm::vec4 random;
 			uint32_t showNrc;
 			float blendFactor;
+			uint32_t enableTrainFilterDebug;
 		};
 
 		static VkDescriptorSetLayout m_DescSetLayout;
