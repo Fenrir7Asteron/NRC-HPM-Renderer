@@ -8,6 +8,10 @@ Second modification of NRC adds cloud density to the input of NRC neural network
 
 Detailed description of modifications present in this fork are described in the text of my master's thesis stored in the `doc` folder of this repository.
 
+## Results
+![ezgif-5-1f05a3154c](https://github.com/Fenrir7Asteron/NRC-HPM-Renderer/assets/35568038/b2190560-9856-4174-a674-58db3c73ab00)
+To the left base NRC from `master` branch, to the right my modified version from `combined` branch with both modifications and biased transmittance estimator enabled.
+
 ## Requirements
 - CUDA v12.1 and NVIDIA GPU with [compute capability](https://developer.nvidia.com/cuda-gpus#compute) >= 8.6
 - Visual Studio 22. I used Visual Studio 2022 and it is not guaranteed that everything will work on other versions.
